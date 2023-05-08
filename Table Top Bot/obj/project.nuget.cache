@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "dgSpecHash": "X9gOcR9D+XmbGyaK1kdDiftab6KCSQ9C1hWsck3jFyB9Qm27h9NrXgxXnLJGn3EVtdmvjZCaPknI72ggmXPNzw==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Kyle Chiasson\\source\\repos\\TabletopBot\\Table Top Bot\\Table Top Bot.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\discord.net\\3.8.1\\discord.net.3.8.1.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\discord.net.commands\\3.8.1\\discord.net.commands.3.8.1.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\discord.net.core\\3.8.1\\discord.net.core.3.8.1.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\discord.net.interactions\\3.8.1\\discord.net.interactions.3.8.1.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\discord.net.rest\\3.8.1\\discord.net.rest.3.8.1.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\discord.net.webhook\\3.8.1\\discord.net.webhook.3.8.1.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\discord.net.websocket\\3.8.1\\discord.net.websocket.3.8.1.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\5.0.0\\microsoft.extensions.dependencyinjection.abstractions.5.0.0.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\newtonsoft.json\\13.0.1\\newtonsoft.json.13.0.1.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\system.collections.immutable\\5.0.0\\system.collections.immutable.5.0.0.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\system.interactive.async\\5.0.0\\system.interactive.async.5.0.0.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\system.linq.async\\5.0.0\\system.linq.async.5.0.0.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\system.reactive\\5.0.0\\system.reactive.5.0.0.nupkg.sha512",
+    "C:\\Users\\Kyle Chiasson\\.nuget\\packages\\system.valuetuple\\4.5.0\\system.valuetuple.4.5.0.nupkg.sha512"
+  ],
+  "logs": []
+}
