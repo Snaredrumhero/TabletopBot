@@ -1,5 +1,4 @@
-﻿using System;
-
+﻿//Don't share this file
 namespace Table_Top_Bot
 {
     public class PrivateVariables
