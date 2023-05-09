@@ -1,13 +1,15 @@
 ﻿using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
+using System.Diagnostics;
 
 namespace Table_Top_Bot
 {
     internal class Program
     {
         private DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
-
+        private readonly ulong[] AllowedCommandChannels = { 1104487160226258964 };
+        private List<Func<SocketSlashCommand, Task>> SlashCommandCallbacks = new List<Func<SocketSlashCommand, Task>>();
         public static Task Main(string[] args) => new Program().MainAsync();
 
         public async Task MainAsync()
@@ -15,6 +17,17 @@ namespace Table_Top_Bot
             Client.Log += (LogMessage msg) =>
             {
                 Console.WriteLine(msg.ToString());
+                return Task.CompletedTask;
+            };
+            Client.SlashCommandExecuted += (SocketSlashCommand command) =>
+            {
+                for (int i = 0; i < AllowedCommandChannels.Length; i++)
+                    if (command.ChannelId == AllowedCommandChannels[i])
+                    {
+                        for (int j = 0; j < SlashCommandCallbacks.Count; j++)
+                            SlashCommandCallbacks[i](command);
+                        return Task.CompletedTask;
+                    }
                 return Task.CompletedTask;
             };
             //Init all moduels
@@ -199,9 +212,6 @@ namespace Table_Top_Bot
         public void AddSelectMenuExecutedCallback(Func<SocketMessageComponent, Task> _f) 
         { Client.SelectMenuExecuted += _f; }
         
-        public void AddSlashCommandExecutedCallback(Func<SocketSlashCommand, Task> _f) 
-        { Client.SlashCommandExecuted += _f; }
-        
         public void AddSpeakerAddedCallback(Func<SocketStageChannel, SocketGuildUser, Task> _f) 
         { Client.SpeakerAdded += _f; }
         
@@ -263,6 +273,17 @@ namespace Table_Top_Bot
         { Client.WebhooksUpdated += _f; }
         #endregion
 
+        //Changed for channel checking
+        public void AddSlashCommandExecutedCallback(Func<SocketSlashCommand, Task> _f)
+        { SlashCommandCallbacks.Add(_f); }
+        public async void AddGuildCommand(SlashCommandBuilder _builder)
+        {
+            try
+            {
+                await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_builder.Build());
+            }
+            catch (Exception ex) { Debug.WriteLine(ex); }
+        }
     }
     //A class to be overridden to create moduels
     abstract class Module
