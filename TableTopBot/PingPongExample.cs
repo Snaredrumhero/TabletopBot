@@ -1,6 +1,6 @@
 ﻿using Discord.WebSocket;
 
-namespace Table_Top_Bot
+namespace TableTopBot
 {
     //An example Module
     internal class PingPong : Module

@@ -3,7 +3,7 @@ using Discord.Rest;
 using Discord.WebSocket;
 using System.Diagnostics;
 
-namespace Table_Top_Bot
+namespace TableTopBot
 {
     internal class Program
     {

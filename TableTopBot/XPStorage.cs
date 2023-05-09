@@ -1,4 +1,4 @@
-﻿namespace Table_Top_Bot
+﻿namespace TableTopBot
 {
     internal static class XpStorage
     {
