@@ -52,3 +52,11 @@ C:\Users\Kyle Chiasson\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\r
 C:\Users\Kyle Chiasson\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\Table Top Bot.pdb
 C:\Users\Kyle Chiasson\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\Table Top Bot.genruntimeconfig.cache
 C:\Users\Kyle Chiasson\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\ref\Table Top Bot.dll
+C:\Users\Michael\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\Table Top Bot.csproj.AssemblyReference.cache
+C:\Users\Michael\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\Table Top Bot.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Michael\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\Table Top Bot.AssemblyInfoInputs.cache
+C:\Users\Michael\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\Table Top Bot.AssemblyInfo.cs
+C:\Users\Michael\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\Table Top Bot.csproj.CoreCompileInputs.cache
+C:\Users\Michael\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\Table Top Bot.dll
+C:\Users\Michael\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\refint\Table Top Bot.dll
+C:\Users\Michael\source\repos\TabletopBot\Table Top Bot\obj\Debug\net6.0\Table Top Bot.pdb

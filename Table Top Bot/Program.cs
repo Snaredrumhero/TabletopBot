@@ -10,7 +10,7 @@ namespace Table_Top_Bot
 
         public static Task Main(string[] args) => new Program().MainAsync();
 
-        public async Task MainAsync()
+        private async Task MainAsync()
         {
             Client.Log += (LogMessage msg) =>
             {
@@ -265,7 +265,7 @@ namespace Table_Top_Bot
 
     }
     //A class to be overridden to create moduels
-    abstract class Module
+    internal abstract class Module
     {
         //The Program this Module is attached to
         protected Program Bot;
