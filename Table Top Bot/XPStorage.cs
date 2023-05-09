@@ -13,7 +13,7 @@
         };
         public class User
         {
-            public string discordID = "";
+            public ulong discordID = 0;
             public string PID = "";
             public List<Game> gamesPlayed = new List<Game>();
             public bool wonRaffle = false; //Could be changed to an int if wanted multiple wins
@@ -32,19 +32,11 @@
             public uint length = 0;
         }
 
-        public static User? GetUser(string _discordID)
+        public static User? GetUser(ulong _discordID) => Users.FirstOrDefault(user => user.discordID == _discordID);
+        public static void InitUser(ulong _discordID, string _pid)
         {
-            User? u = null;
-            for (int i = 0; i < Users.Count; i++)
-                if (Users[i].discordID == _discordID)
-                    u = Users[i];
-            return u;
-        }
-        public static void InitUser(string _discordID, string _pid)
-        {
-            for (int i = 0; i < Users.Count; i++)
-                if (Users[i].discordID == _discordID)
-                    return;
+            if (Users.Any(user => user.discordID == _discordID))
+                return;
             Users.Add(new User { discordID = _discordID, PID = _pid });
         }
         public static void RemoveUser(User _user) { Users.Remove(_user); }
