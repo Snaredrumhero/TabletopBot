@@ -25,11 +25,11 @@
         public class Game
         {
             public uint id = 0;
-            public enum GameType { NULL = 0, Ranked, CoOp, Unranked }
+            public enum GameType { NULL = 0, Ranked = 1, CoOp = 2, Teams = 3, Party = 4 }
             public GameType type = GameType.NULL;
             public uint playerCount = 0;
             public uint rank = 0;
-            public float length = 0.0f;
+            public uint length = 0;
         }
 
         public static User? GetUser(string _discordID)
@@ -86,7 +86,8 @@
             int points = 0;
 
             //Adds for each game played
-            //foreach game += xp code           //needs replaced
+            for (int i = 0; i < _user.gamesPlayed.Count; i++)
+                points += XPCalc(_user.gamesPlayed[i]);
 
             //Adds for each achievement
             int[] achievementValues = Achievements.Values.ToArray();
@@ -119,6 +120,30 @@
             for (int i = 0; i < _x; i++)
                 s += $"{i}: {GetUserPointValue(Users[i])} - {Users[i].discordID}\n";
             return s;
+        }
+
+        private const float POINTS_SCALE = 1.5f;//scale of points awarded (makes numbers bigger bc big numbers are fun)
+        private static readonly float[] RANKED_POSITIONS = { 24f/24f, 22f/24f, 20f/24f, 18f/24f, 17f/24f, 16f/24f };
+        private static int XPCalc(Game _game)
+        {
+            float points = POINTS_SCALE * _game.length * 3 / 2;
+            if (_game.type == Game.GameType.NULL || _game.rank <= 0 || _game.rank > _game.playerCount)//error
+                return 0;
+            if(_game.type == Game.GameType.Ranked)
+                if (_game.playerCount >= RANKED_POSITIONS.Length)
+                {
+                    if(_game.rank > RANKED_POSITIONS.Length)
+                        return (int)(points * RANKED_POSITIONS[RANKED_POSITIONS.Length - 1]);
+                    return (int)(points * RANKED_POSITIONS[_game.rank - 1]);
+                }
+                else
+                    //1st gets full (24/24)
+                    //if 3 people 2 gets 20
+                    //if 5 people 2: 22 3:20 4:18
+                    //last gets 2/3 (16/24)
+                    return (int)(points * (8f * (_game.playerCount - _game.rank) / (_game.playerCount - 1 + 16) / 24));
+            //CoOp Teams Party W: 3rd place L: 2/3 last
+            return (int)(points * (_game.rank == 1 ? RANKED_POSITIONS[2] : RANKED_POSITIONS[RANKED_POSITIONS.Length - 1]));
         }
     }
 }
