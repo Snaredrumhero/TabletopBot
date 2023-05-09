@@ -3,7 +3,7 @@ using Discord.Rest;
 using Discord.WebSocket;
 using System.Diagnostics;
 
-namespace Table_Top_Bot
+namespace TableTopBot
 {
     internal class Program
     {
@@ -40,7 +40,7 @@ namespace Table_Top_Bot
             new PingPong(this);
 
             //run bot
-            await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
+            await Client.LoginAsync(TokenType.Bot, "PrivateVariables.KEY");
             await Client.StartAsync();
             await Task.Delay(Timeout.Infinite);
         }
