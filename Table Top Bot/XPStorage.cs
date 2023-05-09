@@ -2,7 +2,7 @@
 {
     internal static class XPStorage
     {
-        static List<User> Users = new List<User>();
+        private static List<User> Users = new List<User>();
         readonly static Dictionary<string, int> Achievements = new Dictionary<string, int>()
         {
             { "Temp", 0 }, //just temp
@@ -60,16 +60,29 @@
                 return;
             _user.achievements[Achievements.Keys.ToList().IndexOf(_achievementName)] = false;
         }
-        public static void UserAddGame(User _user)
+        //Game type 1 = ranked, 2 = CoOp, 3 = Teams, 4 = Party
+        //Rank = 1 for win 2 for loss
+        public static void UserAddGame(User _user, uint _playerCount, uint _gameType, uint _rank, uint _length)
         {
-            /*_user.gamesPlayed.Add(new Game
+            Game.GameType type = Game.GameType.NULL;
+            if (_gameType == 1)
+                type = Game.GameType.Ranked;
+            else if (_gameType == 2)
+                type = Game.GameType.CoOp;
+            else if (_gameType == 3)
+                type = Game.GameType.Teams;
+            else if (_gameType == 4)
+                type = Game.GameType.Party;
+            if (type == Game.GameType.NULL)//error
+                return;
+            _user.gamesPlayed.Add(new Game
             {
-                id = u.numberGamesPlayed,
-                type = ,
-                playerCount = ,
-                rank = ,
-                length = ,
-            });*/
+                id = _user.numberGamesPlayed,
+                type = type,
+                playerCount = _playerCount,
+                rank = _rank,
+                length = _length,
+            });
             _user.numberGamesPlayed++;
         }
         public static void UserRemoveGame(User _user, int _id)
