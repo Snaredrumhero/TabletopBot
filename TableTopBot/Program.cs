@@ -39,10 +39,7 @@ namespace TableTopBot
         {
             //Guard clause: Only execute in approved channels
             if (AllowedCommandChannels.All(z => z != command.ChannelId))
-            {
                 return;
-            }
-
             //Execute each callback in SlashCommandCallbacks
             foreach (Func<SocketSlashCommand, Task> callback in SlashCommandCallbacks) 
                 await callback(command);
