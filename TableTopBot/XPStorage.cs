@@ -1,28 +1,16 @@
 ﻿namespace TableTopBot
 {
-    internal static class XpStorage //Since the class is static, we won't be able to have two running at the same time
-                                    //So if we want to dump the object into a JSON file, it will make things much more difficult
+    //Since the class is static, we won't be able to have two running at the same time
+    //So if we want to dump the object into a JSON file, it will make things much more difficult
+    internal static class XpStorage
     {
-        private static readonly List<User> Users = new();
-
-        private static readonly int[] TicketThresholds = new int[]
-        {
-            0, //need to add more ticket values
-        };
-
+        //Structs & Classes
         public struct AchievementData
         {
             public string Name;
             public string Description;
             public int XpValue;
         }
-
-        private static readonly List<AchievementData> DefaultAchievements = new()
-        {
-            new AchievementData {Name = "name", Description = "description", XpValue = 0},
-            //We can add negative achievements
-        };
-
         public class User
         {
             public ulong DiscordId;
@@ -42,28 +30,21 @@
                 _gamesPlayed.Add(new Game(NumberGamesPlayed, type, playerCount, rank, length));
                 NumberGamesPlayed++;
             }
-            public void RemoveGame(int id)
-            {
-                _gamesPlayed.RemoveAll(game => game.Id == id);
-            }
+            public void RemoveGame(int id) => _gamesPlayed.RemoveAll(game => game.Id == id);
 
             public int Points => AddPointValues();
             private int AddPointValues()
-            {
-                return _gamesPlayed.Select(game => game.Xp).Sum() + Achievements.Select(achievement => achievement.XpValue).Sum();
-            }
+            { return _gamesPlayed.Select(game => game.Xp).Sum() + Achievements.Select(achievement => achievement.XpValue).Sum(); }
 
             public override string ToString()
-            {
-                return $"{DiscordId}\nPID: {Pid}\nPoints: {AddPointValues()}";
-            }
+            { return $"{DiscordId}\nPID: {Pid}\nPoints: {AddPointValues()}"; }
 
             public void ClaimAchievement(string achievementName)
             {
                 Achievement achievement = _allAchievements.FirstOrDefault(achievement => achievement.Name == achievementName) ?? throw new ArgumentException("Achievement Not Found");
                 achievement.IsClaimed = true;
-
             }
+
             public void UnclaimAchievement(string achievementName)
             {
                 Achievement achievement = _allAchievements.FirstOrDefault(achievement => achievement.Name == achievementName) ?? throw new ArgumentException("Achievement Not Found");
@@ -86,15 +67,9 @@
             public Game(uint id, GameType type, uint playerCount, uint rank, uint gameLengthInMinutes)
             {
                 if (rank == 0)
-                {
                     throw new ArgumentException(message: "rank can not be 0", paramName: nameof(rank));
-                }
-
                 if (playerCount < rank)
-                {
                     throw new ArgumentException(paramName: nameof(rank), message: "rank cannot be greater than playerCount");
-                }
-
                 Id = id;
                 Type = type;
                 PlayerCount = playerCount;
@@ -119,7 +94,6 @@
                 return (int)(points * RankedPositions[Rank - 1]);
             }
         }
-
         public class Achievement
         {
             public string Name => _data.Name;
@@ -129,10 +103,21 @@
             private readonly AchievementData _data;
 
             public Achievement(AchievementData data)
-            {
-                _data = data;
-            }
+            { _data = data; }
         }
+
+        //Psudo Const
+        private static readonly int[] TicketThresholds = new int[]
+        {
+            0, //need to add more ticket values
+        };
+        private static readonly List<AchievementData> DefaultAchievements = new()
+        {
+            new AchievementData {Name = "name", Description = "description", XpValue = 0},
+            //We can add negative achievements
+        };
+
+        private static readonly List<User> Users = new();
 
         public static User? GetUser(ulong discordId) => Users.FirstOrDefault(user => user.DiscordId == discordId);
         // We will need to check if an event user's discordId is null
@@ -140,9 +125,7 @@
         public static void AddNewUser(ulong discordId, string pid)
         {
             if(Users.Any(user => user.DiscordId == discordId))
-            {
-                throw new NotImplementedException(); // What do we want to do when a duplicate user arrives?
-            }
+                throw new InvalidDataException(message: "User already registered");
             Users.Add(new User { DiscordId = discordId, Pid = pid });
         }
         public static void RemoveUser(User user) => Users.Remove(user);
@@ -150,29 +133,25 @@
         public static string DrawRaffle() //returns the message to send to the server
         {
             List<User> raffleEntries = new();
+            //Return the array of copies of users for every time they passed a raffle threshold
             foreach (User user in Users.Where(user => !user.IsRaffleWinner))
-            {
-                raffleEntries.AddRange(TicketThresholds.Where(points => user.Points > points).Select(_ => user)); 
-                //Return the array of copies of users for every time they passed a raffle threshold
-            }
+                raffleEntries.AddRange(TicketThresholds.Where(points => user.Points > points).Select(_ => user));
+            
             Random r = new(DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond);
-            return $"@Everyone Congrats to {raffleEntries[r.Next(raffleEntries.Count)]} for winning the raffle!";
-            // Doesn't notify officers before announcing the raffle, and it doesn't update that the user has won
+            User winner = raffleEntries[r.Next(raffleEntries.Count)];
+            winner.IsRaffleWinner = true;
+            return $"@Everyone Congrats to {winner} for winning the raffle!";
+            // Doesn't notify officers before announcing the raffle
         }
         public static string DisplayTopXUsers(int x)
         {
-            //Fail loudly, not quietly. If it if it doesn't work, say so. That way the caller can fix it
             if (x > Users.Count)
                 throw new ArgumentOutOfRangeException(nameof(x), "There aren't enough users to populate the list");
             Users.Sort();
 
-            //String concat is very memory intensive because each concat requires allocating and deallocating the memory for the previous string (this isn't a string buffer, that's a different type entirely)
-            //This is an easier way of getting what you want
             List<string> lines = new();
-
             for (int i = 0; i < x; i++)
                 lines.Add($"{i}: {Users[i].Points} - {Users[i].DiscordId}");
-
             return string.Join('\n', lines);
         }
     }

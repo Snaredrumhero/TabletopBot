@@ -13,11 +13,14 @@ namespace TableTopBot
         private readonly ulong[] AllowedCommandChannels = { 1104487160226258964 };
         //All slash commands
         private List<Func<SocketSlashCommand, Task>> SlashCommandCallbacks = new List<Func<SocketSlashCommand, Task>>();
-        
+        //All created commands (helps deallocate on turn off)
+        private List<SocketApplicationCommand> CreatedCommands = new List<SocketApplicationCommand>();
+
         public static Task Main(string[] args) => new Program().MainAsync();
 
         private async Task MainAsync()
         {
+            Console.Title = "TabletopBot";
             //Required Lambdas
             Client.Log += (LogMessage msg) =>
             {
@@ -30,9 +33,12 @@ namespace TableTopBot
             new PingPong(this);
 
             //run bot
-            await Client.LoginAsync(TokenType.Bot, "PrivateVariables.KEY");
+            await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
             await Client.StartAsync();
-            await Task.Delay(Timeout.Infinite);
+            await AwaitConsoleCommands();
+            foreach (SocketApplicationCommand c in CreatedCommands)
+                await c.DeleteAsync();
+            await Client.LogoutAsync();
         }
 
         private async Task ClientSlashCommandExecuted(SocketSlashCommand command)
@@ -285,8 +291,19 @@ namespace TableTopBot
 
         public async void AddGuildCommand(SlashCommandBuilder _builder)
         {
-            try { await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_builder.Build()); }
+            try { CreatedCommands.Add(await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_builder.Build())); }
             catch (Exception ex) { Debug.WriteLine(ex); }
+        }
+        private Task AwaitConsoleCommands()
+        {
+            Console.Write("> ");
+            Console.Out.Flush(); //why no flush?
+            string? input = Console.ReadLine();
+            while(input == null || input != "Quit") {
+                Console.Write("Command not recognized\n> ");
+                input = Console.ReadLine(); 
+            }
+            return Task.CompletedTask;
         }
     }
     //A class to be overridden to create moduels
