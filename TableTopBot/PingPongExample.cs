@@ -11,10 +11,14 @@ namespace TableTopBot
         //Place all code that adds a callback here
         public override void InitilizeModule()
         {
-            Bot.AddMessageReceivedCallback(MessageReceived);
+            Bot.AddMessageReceivedCallback(MessageReceived); 
+            /*
+            This means that every function will fire back their message received functions
+            every time a message gets sent 
+            */
         }
 
-        //All functions including callbacks (each callback takes different arguements)
+        //All functions including callbacks (each callback takes different arguments)
         private async Task MessageReceived(SocketMessage message)
         {
             if (message.Content == "!ping")

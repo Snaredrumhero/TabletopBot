@@ -1,6 +1,7 @@
 ﻿namespace TableTopBot
 {
-    internal static class XpStorage
+    internal static class XpStorage //Since the class is static, we won't be able to have two running at the same time
+                                    //So if we want to dump the object into a JSON file, it will make things much more difficult
     {
         private static readonly List<User> Users = new();
 
@@ -19,6 +20,7 @@
         private static readonly List<AchievementData> DefaultAchievements = new()
         {
             new AchievementData {Name = "name", Description = "description", XpValue = 0},
+            //We can add negative achievements
         };
 
         public class User
@@ -90,7 +92,7 @@
 
                 if (playerCount < rank)
                 {
-                    throw new ArgumentException(paramName: nameof(rank), message: "rank cannot be less than playerCount");
+                    throw new ArgumentException(paramName: nameof(rank), message: "rank cannot be greater than playerCount");
                 }
 
                 Id = id;
@@ -133,12 +135,13 @@
         }
 
         public static User? GetUser(ulong discordId) => Users.FirstOrDefault(user => user.DiscordId == discordId);
+        // We will need to check if an event user's discordId is null
 
         public static void AddNewUser(ulong discordId, string pid)
         {
             if(Users.Any(user => user.DiscordId == discordId))
             {
-                return;
+                throw new NotImplementedException(); // What do we want to do when a duplicate user arrives?
             }
             Users.Add(new User { DiscordId = discordId, Pid = pid });
         }
@@ -149,10 +152,12 @@
             List<User> raffleEntries = new();
             foreach (User user in Users.Where(user => !user.IsRaffleWinner))
             {
-                raffleEntries.AddRange(TicketThresholds.Where(points => user.Points > points).Select(_ => user));
+                raffleEntries.AddRange(TicketThresholds.Where(points => user.Points > points).Select(_ => user)); 
+                //Return the array of copies of users for every time they passed a raffle threshold
             }
             Random r = new(DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond);
             return $"@Everyone Congrats to {raffleEntries[r.Next(raffleEntries.Count)]} for winning the raffle!";
+            // Doesn't notify officers before announcing the raffle, and it doesn't update that the user has won
         }
         public static string DisplayTopXUsers(int x)
         {
