@@ -24,17 +24,7 @@ namespace TableTopBot
                 Console.WriteLine(msg.ToString());
                 return Task.CompletedTask;
             };
-            Client.SlashCommandExecuted += (SocketSlashCommand command) =>
-            {
-                for (int i = 0; i < AllowedCommandChannels.Length; i++)
-                    if (command.ChannelId == AllowedCommandChannels[i])
-                    {
-                        for (int j = 0; j < SlashCommandCallbacks.Count; j++)
-                            SlashCommandCallbacks[i](command);
-                        return Task.CompletedTask;
-                    }
-                return Task.CompletedTask;
-            };
+            Client.SlashCommandExecuted += ClientSlashCommandExecuted;
             
             //Init all moduels
             new PingPong(this);
@@ -43,6 +33,19 @@ namespace TableTopBot
             await Client.LoginAsync(TokenType.Bot, "PrivateVariables.KEY");
             await Client.StartAsync();
             await Task.Delay(Timeout.Infinite);
+        }
+
+        private async Task ClientSlashCommandExecuted(SocketSlashCommand command)
+        {
+            //Guard clause: Only execute in approved channels
+            if (AllowedCommandChannels.All(z => z != command.ChannelId))
+            {
+                return;
+            }
+
+            //Execute each callback in SlashCommandCallbacks
+            foreach (Func<SocketSlashCommand, Task> callback in SlashCommandCallbacks) 
+                await callback(command);
         }
 
         //all possible callback events that can be used
