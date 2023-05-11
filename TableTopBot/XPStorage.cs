@@ -152,5 +152,6 @@
                 lines.Add($"{i}: {Users[i].Points} - {Users[i].DiscordId}");
             return string.Join('\n', lines);
         }
+        public void Clear() => Users.Clear();
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Interactions;
 using Discord.Rest;
 using Discord.WebSocket;
 using System.Diagnostics;
@@ -9,8 +10,11 @@ namespace TableTopBot
     {
         //The bot's client
         private DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
-        //Channels that slash commands can be executed in
-        private readonly ulong[] AllowedCommandChannels = { 1104487160226258964 };
+        //Channels
+        public SocketGuild Server() => Client.GetGuild(1047337930965909646);
+        public SocketChannel CommandChannel() => Server().GetChannel(1104487160226258964);
+        public SocketChannel AnnouncementChannel() => Server().GetChannel(1106217661194571806);
+        public SocketChannel LogChannel() => Server().GetChannel(1106257696388296754);
         //All slash commands
         private List<Func<SocketSlashCommand, Task>> SlashCommandCallbacks = new List<Func<SocketSlashCommand, Task>>();
         //All created commands (helps deallocate on turn off)
@@ -21,6 +25,7 @@ namespace TableTopBot
         private async Task MainAsync()
         {
             Console.Title = "TabletopBot";
+            InteractionService interactionService = new InteractionService(Client.Rest);
             //Required Lambdas
             Client.Log += (LogMessage msg) =>
             {
@@ -37,8 +42,7 @@ namespace TableTopBot
             await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
             await Client.StartAsync();
             await AwaitConsoleCommands();
-            foreach (SocketApplicationCommand c in CreatedCommands)
-                await c.DeleteAsync();
+            await Server().DeleteApplicationCommandsAsync();
             await Client.LogoutAsync();
             
         }
@@ -46,7 +50,7 @@ namespace TableTopBot
         private async Task ClientSlashCommandExecuted(SocketSlashCommand command)
         {
             //Guard clause: Only execute in approved channels
-            if (AllowedCommandChannels.All(z => z != command.ChannelId))
+            if (command.ChannelId != CommandChannel().Id)
                 return;
             //Execute each callback in SlashCommandCallbacks
             foreach (Func<SocketSlashCommand, Task> callback in SlashCommandCallbacks)
@@ -301,19 +305,18 @@ namespace TableTopBot
 
         public async void AddGuildCommand(SlashCommandBuilder _builder)
         {
-            try { CreatedCommands.Add(await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_builder.Build())); }
+            try { CreatedCommands.Add(await Server().CreateApplicationCommandAsync(_builder.Build())); }
             catch (Exception ex) { Debug.WriteLine(ex); }
         }
-        private Task AwaitConsoleCommands()
+        private async Task AwaitConsoleCommands()
         {
+            await Task.Delay(3000);
             Console.Write("> ");
-            Console.Out.Flush(); //why no flush?
             string? input = Console.ReadLine();
             while(input == null || input != "Quit") {
                 Console.Write("Command not recognized\n> ");
                 input = Console.ReadLine(); 
             }
-            return Task.CompletedTask;
         }
     }
     //A class to be overridden to create moduels
