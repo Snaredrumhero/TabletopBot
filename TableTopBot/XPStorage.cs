@@ -1,8 +1,6 @@
 ﻿namespace TableTopBot
 {
-    //Since the class is static, we won't be able to have two running at the same time
-    //So if we want to dump the object into a JSON file, it will make things much more difficult
-    internal static class XpStorage
+    internal class XpStorage
     {
         //Structs & Classes
         public struct AchievementData
@@ -117,20 +115,20 @@
             //We can add negative achievements
         };
 
-        private static readonly List<User> Users = new();
+        private readonly List<User> Users = new();
 
-        public static User? GetUser(ulong discordId) => Users.FirstOrDefault(user => user.DiscordId == discordId);
+        public User? GetUser(ulong discordId) => Users.FirstOrDefault(user => user.DiscordId == discordId);
         // We will need to check if an event user's discordId is null
 
-        public static void AddNewUser(ulong discordId, string pid)
+        public void AddNewUser(ulong discordId, string pid)
         {
             if(Users.Any(user => user.DiscordId == discordId))
                 throw new InvalidDataException(message: "User already registered");
             Users.Add(new User { DiscordId = discordId, Pid = pid });
         }
-        public static void RemoveUser(User user) => Users.Remove(user);
+        public void RemoveUser(User user) => Users.Remove(user);
 
-        public static string DrawRaffle() //returns the message to send to the server
+        public string DrawRaffle() //returns the message to send to the server
         {
             List<User> raffleEntries = new();
             //Return the array of copies of users for every time they passed a raffle threshold
@@ -143,7 +141,7 @@
             return $"@Everyone Congrats to {winner} for winning the raffle!";
             // Doesn't notify officers before announcing the raffle
         }
-        public static string DisplayTopXUsers(int x)
+        public string DisplayTopXUsers(int x)
         {
             if (x > Users.Count)
                 throw new ArgumentOutOfRangeException(nameof(x), "There aren't enough users to populate the list");

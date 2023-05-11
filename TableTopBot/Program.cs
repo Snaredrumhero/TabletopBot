@@ -31,6 +31,7 @@ namespace TableTopBot
             
             //Init all moduels
             new PingPong(this);
+            new XPModule(this);
 
             //run bot
             await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
@@ -39,6 +40,7 @@ namespace TableTopBot
             foreach (SocketApplicationCommand c in CreatedCommands)
                 await c.DeleteAsync();
             await Client.LogoutAsync();
+            
         }
 
         private async Task ClientSlashCommandExecuted(SocketSlashCommand command)
