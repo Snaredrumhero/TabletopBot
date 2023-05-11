@@ -6,7 +6,7 @@ namespace TableTopBot
     internal class PingPong : Module
     {
         //Constructor must be here even if there is nothing except base call
-        public PingPong(Program _bot) : base(_bot) { }
+        public PingPong(Program bot) : base(bot) { }
 
         //Place all code that adds a callback here
         public override void InitilizeModule()
