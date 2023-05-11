@@ -49,8 +49,16 @@ namespace TableTopBot
             if (AllowedCommandChannels.All(z => z != command.ChannelId))
                 return;
             //Execute each callback in SlashCommandCallbacks
-            foreach (Func<SocketSlashCommand, Task> callback in SlashCommandCallbacks) 
-                await callback(command);
+            foreach (Func<SocketSlashCommand, Task> callback in SlashCommandCallbacks)
+            {
+                try { await callback(command); }
+                catch (Exception _ex)
+                {
+                    EmbedBuilder embed = new EmbedBuilder();
+                    embed.AddField("Error", _ex.Message);
+                    await command.RespondAsync(embed: embed.Build(), ephemeral: true);
+                }
+            }
         }
 
         //all possible callback events that can be used

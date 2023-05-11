@@ -223,8 +223,73 @@ namespace TableTopBot
                 };
                 return Task.CompletedTask;
             });
+            Bot.AddSlashCommandExecutedCallback(SlashCallbacks);
         }
 
         //Listeners
+        public Task SlashCallbacks(Discord.WebSocket.SocketSlashCommand _command)
+        {
+            //most commands should have ephemerial responses
+            switch (_command.CommandName)
+            {
+                case "start":
+                    //opens the all day command channel to all
+                    //creates an xpstorage
+                    break;
+                case "end":
+                    //displays the top 3 users to the all-day announcements channel for prizes
+                    //could display overall statistics for the all-day as well
+                    //closes the all day command channel
+                    break;
+                case "draw-raffle":
+                    //draws a raffle ticket and displays the result in the all-day announcements channel
+                    //could add conirmation of the display (embed with button would be a good solution)
+                    break;
+                case "see-player":
+                    //shows the entire profile for a user
+                    break;
+                case "showXusers":
+                    //shows the entire profile of the top x users
+                    break;
+                case "remove-player-game":
+                    //removes a game from a player
+                    //could add conirmation of the display (embed with button would be a good solution)
+                    break;
+                case "remove-player-achievement":
+                    //removes an achievement from a player
+                    //could add conirmation of the display (embed with button would be a good solution)
+                    break;
+                case "remove-player":
+                    //removes a player from the event
+                    //could add conirmation of the display (embed with button would be a good solution)
+                    break;
+                case "join-event":
+                    //registers the caller to the event
+                    break;
+                case "leave-event":
+                    //removes the caller from the event
+                    break;
+                case "see-self":
+                    //Shows the caller their entire profile
+                    break;
+                case "add-game":
+                    //Adds a game to the caller's profile
+                    break;
+                case "remove-game":
+                    //Removes a game from the caller's profile
+                    //could add conirmation of the display (embed with button would be a good solution)
+                    break;
+                case "add-achievement":
+                    //Adds an achivement to the caller's profile
+                    break;
+                case "remove-achievement":
+                    //Removes an achivement from the caller's profile
+                    //could add conirmation of the display (embed with button would be a good solution)
+                    break;
+                default:
+                    throw new MissingMethodException(message: $"No definition for commad: {_command.CommandName}");
+            }
+            return Task.CompletedTask;
+        }
     }
 }
