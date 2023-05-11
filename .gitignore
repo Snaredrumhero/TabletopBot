@@ -398,4 +398,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 # not to be shared
-/Table Top Bot/PrivateVariables.cs
+/TableTopBot/PrivateVariables.cs

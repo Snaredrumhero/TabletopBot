@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Interactions;
 using Discord.Rest;
 using Discord.WebSocket;
 using System.Diagnostics;
@@ -8,43 +9,47 @@ namespace TableTopBot
     internal class Program
     {
         //The bot's client
-        private DiscordSocketClient _client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
-        //Channels that slash commands can be executed in
-        private readonly ulong[] _allowedCommandChannels = { 1104487160226258964 };
+        private DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
+        //Channels
+        public SocketGuild Server() => Client.GetGuild(1047337930965909646);
+        public SocketTextChannel CommandChannel() => Server().GetTextChannel(1104487160226258964);
+        public SocketTextChannel AnnouncementChannel() => Server().GetTextChannel(1106217661194571806);
+        public SocketTextChannel LogChannel() => Server().GetTextChannel(1106257696388296754);
         //All slash commands
-        private List<Func<SocketSlashCommand, Task>> _slashCommandCallbacks = new List<Func<SocketSlashCommand, Task>>();
+        private List<Func<SocketSlashCommand, Task>> SlashCommandCallbacks = new List<Func<SocketSlashCommand, Task>>();
         
         public static Task Main(string[] args) => new Program().MainAsync();
 
         private async Task MainAsync()
         {
+            Console.Title = "TabletopBot";
+            InteractionService interactionService = new InteractionService(Client.Rest);
             //Required Lambdas
             _client.Log += (LogMessage msg) =>
             {
                 Console.WriteLine(msg.ToString());
                 return Task.CompletedTask;
             };
-            _client.SlashCommandExecuted += ClientSlashCommandExecuted;
+            Client.SlashCommandExecuted += ClientSlashCommandExecuted;
             
             //Init all moduels
             new PingPong(this);
+            new XPModule(this);
 
             //run bot
-            await _client.LoginAsync(TokenType.Bot, "PrivateVariables.KEY");
-            await _client.StartAsync();
+            await Client.LoginAsync(TokenType.Bot, "PrivateVariables.KEY");
+            await Client.StartAsync();
             await Task.Delay(Timeout.Infinite);
         }
 
         private async Task ClientSlashCommandExecuted(SocketSlashCommand command)
         {
             //Guard clause: Only execute in approved channels
-            if (_allowedCommandChannels.All(z => z != command.ChannelId))
+            if (AllowedCommandChannels.All(z => z != command.ChannelId))
             {
                 return;
-            }
-
             //Execute each callback in SlashCommandCallbacks
-            foreach (Func<SocketSlashCommand, Task> callback in _slashCommandCallbacks) 
+            foreach (Func<SocketSlashCommand, Task> callback in SlashCommandCallbacks) 
                 await callback(command);
         }
 
@@ -288,8 +293,18 @@ namespace TableTopBot
 
         public async void AddGuildCommand(SlashCommandBuilder builder)
         {
-            try { await _client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(builder.Build()); }
+            try { await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_builder.Build()); }
             catch (Exception ex) { Debug.WriteLine(ex); }
+        }
+        private async Task AwaitConsoleCommands()
+        {
+            await Task.Delay(3000);
+            Console.Write("> ");
+            string? input = Console.ReadLine();
+            while(input == null || input != "Quit") {
+                Console.Write("Command not recognized\n> ");
+                input = Console.ReadLine(); 
+            }
         }
     }
     //A class to be overridden to create modules
