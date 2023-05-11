@@ -12,9 +12,9 @@ namespace TableTopBot
         private DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
         //Channels
         public SocketGuild Server() => Client.GetGuild(1047337930965909646);
-        public SocketChannel CommandChannel() => Server().GetChannel(1104487160226258964);
-        public SocketChannel AnnouncementChannel() => Server().GetChannel(1106217661194571806);
-        public SocketChannel LogChannel() => Server().GetChannel(1106257696388296754);
+        public SocketTextChannel CommandChannel() => Server().GetTextChannel(1104487160226258964);
+        public SocketTextChannel AnnouncementChannel() => Server().GetTextChannel(1106217661194571806);
+        public SocketTextChannel LogChannel() => Server().GetTextChannel(1106257696388296754);
         //All slash commands
         private List<Func<SocketSlashCommand, Task>> SlashCommandCallbacks = new List<Func<SocketSlashCommand, Task>>();
         //All created commands (helps deallocate on turn off)
@@ -33,7 +33,7 @@ namespace TableTopBot
                 return Task.CompletedTask;
             };
             Client.SlashCommandExecuted += ClientSlashCommandExecuted;
-            
+
             //Init all moduels
             new PingPong(this);
             new XPModule(this);

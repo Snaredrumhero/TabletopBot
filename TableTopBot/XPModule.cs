@@ -1,12 +1,12 @@
 ﻿using Discord;
-using Discord.Interactions;
+using Discord.WebSocket;
 
 namespace TableTopBot
 {
     internal class XPModule : Module
     {
-        private XpStorage xpSystem;
-        public XPModule(Program _bot) : base(_bot) { xpSystem = new XpStorage(); }
+        private XpStorage xpSystem = new XpStorage();
+        public XPModule(Program _bot) : base(_bot) { }
 
         public override void InitilizeModule()
         {
@@ -113,7 +113,7 @@ namespace TableTopBot
                     },
                 };
                 Bot.AddGuildCommand(command);
-                //remover user
+                //remove user
                 command = new SlashCommandBuilder()
                 {
                     Name = "remove-player",
@@ -136,6 +136,14 @@ namespace TableTopBot
                 {
                     Name = "join-event",
                     Description = "registers you for the current event",
+                    Options = new List<SlashCommandOptionBuilder>() {
+                        new SlashCommandOptionBuilder(){
+                            Name = "PID",
+                            Type = ApplicationCommandOptionType.String,
+                            Description = "your PID",
+                            IsRequired = true,
+                        },
+                    },
                 };
                 Bot.AddGuildCommand(command);
                 //withdraw
@@ -236,71 +244,79 @@ namespace TableTopBot
         }
 
         //Listeners
-        public Task SlashCallbacks(Discord.WebSocket.SocketSlashCommand _command)
+        public async Task SlashCallbacks(SocketSlashCommand _command)
         {
             //most commands should have ephemerial responses
+            //add logging to all commands
+            List<SocketSlashCommandDataOption> options = _command.Data.Options.ToList();
+            EmbedBuilder embed = new EmbedBuilder();
             switch (_command.CommandName)
             {
                 case "start":
-                    //add conirmation of the display (embed with button would be a good solution)
+                    //add confirmation (embed with button would be a good solution)
                     //opens the all day command channel to all
                     xpSystem.Clear();
                     break;
                 case "end":
-                    //add conirmation of the display (embed with button would be a good solution)
+                    //add confirmation (embed with button would be a good solution)
                     //displays the top 3 users to the all-day announcements channel for prizes
                     //could display overall statistics for the all-day as well
                     //closes the all day command channel from all
                     break;
                 case "draw-raffle":
-                    //add conirmation of the display (embed with button would be a good solution)
-                    //draws a raffle ticket and displays the result in the all-day announcements channel
+                    //add confirmation (embed with button would be a good solution)
+                    await Bot.AnnouncementChannel().SendMessageAsync(xpSystem.DrawRaffle());
                     break;
                 case "see-player":
-                    //shows the entire profile for a user
+                    embed.AddField("Player Data", xpSystem.GetUser(((SocketGuildUser)options[0].Value).Id).ToString());
+                    await _command.RespondAsync(embed: embed.Build(), ephemeral: true);
                     break;
                 case "show-x-users":
                     //shows the entire profile of the top x users
                     break;
                 case "remove-player-game":
-                    //add conirmation of the display (embed with button would be a good solution)
+                    //add confirmation (embed with button would be a good solution)
                     //removes a game from a player
                     break;
                 case "remove-player-achievement":
-                    //add conirmation of the display (embed with button would be a good solution)
+                    //add confirmation (embed with button would be a good solution)
                     //removes an achievement from a player
                     break;
                 case "remove-player":
-                    //add conirmation of the display (embed with button would be a good solution)
+                    //add confirmation (embed with button would be a good solution)
                     //removes a player from the event
                     break;
                 case "join-event":
-                    //registers the caller to the event
+                    string PID = (string)options[0].Value;
+                    if (PID[0] != 'P' || PID.Length != 10) //Check if the last 9 are numbers
+                        throw new InvalidDataException(message: "Invalid PID.");
+                    xpSystem.AddNewUser(_command.User.Id, PID);
                     break;
                 case "leave-event":
-                    //removes the caller from the event
+                    //add confirmation (embed with button would be a good solution)
+                    xpSystem.RemoveUser(xpSystem.GetUser(_command.User.Id));
                     break;
                 case "see-self":
-                    //Shows the caller their entire profile
+                    embed.AddField("Your Data", xpSystem.GetUser(_command.User.Id).ToString());
+                    await _command.RespondAsync(embed: embed.Build(), ephemeral: true);
                     break;
                 case "add-game":
                     //Adds a game to the caller's profile
                     break;
                 case "remove-game":
-                    //could add conirmation of the display (embed with button would be a good solution)
+                    //add confirmation (embed with button would be a good solution)
                     //Removes a game from the caller's profile
                     break;
                 case "add-achievement":
                     //Adds an achivement to the caller's profile
                     break;
                 case "remove-achievement":
-                    //could add conirmation of the display (embed with button would be a good solution)
+                    //add confirmation (embed with button would be a good solution)
                     //Removes an achivement from the caller's profile
                     break;
                 default:
                     throw new MissingMethodException(message: $"No definition for commad: {_command.CommandName}");
             }
-            return Task.CompletedTask;
         }
     }
 }

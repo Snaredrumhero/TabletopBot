@@ -117,8 +117,13 @@
 
         private readonly List<User> Users = new();
 
-        public User? GetUser(ulong discordId) => Users.FirstOrDefault(user => user.DiscordId == discordId);
-        // We will need to check if an event user's discordId is null
+        public User GetUser(ulong discordId)
+        {
+            User? u = Users.FirstOrDefault(user => user.DiscordId == discordId);
+            if (u == null)
+                throw new NullReferenceException(message: "User not found in system.");
+            return u;
+        }
 
         public void AddNewUser(ulong discordId, string pid)
         {
