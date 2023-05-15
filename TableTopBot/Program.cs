@@ -25,7 +25,7 @@ namespace TableTopBot
             Console.Title = "TabletopBot";
             InteractionService interactionService = new InteractionService(Client.Rest);
             //Required Lambdas
-            _client.Log += (LogMessage msg) =>
+            Client.Log += (LogMessage msg) =>
             {
                 Console.WriteLine(msg.ToString());
                 return Task.CompletedTask;
@@ -37,16 +37,19 @@ namespace TableTopBot
             new XPModule(this);
 
             //run bot
-            await Client.LoginAsync(TokenType.Bot, "PrivateVariables.KEY");
+            await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
             await Client.StartAsync();
-            await Task.Delay(Timeout.Infinite);
+            while (Client.LoginState != LoginState.LoggedIn) { }
+            await AwaitConsoleCommands();
+            await Server().DeleteApplicationCommandsAsync();
+            await Client.LogoutAsync();
+            
         }
 
         private async Task ClientSlashCommandExecuted(SocketSlashCommand command)
         {
             //Guard clause: Only execute in approved channels
-            if (AllowedCommandChannels.All(z => z != command.ChannelId))
-            {
+            if (CommandChannel().Id != command.ChannelId)
                 return;
             //Execute each callback in SlashCommandCallbacks
             foreach (Func<SocketSlashCommand, Task> callback in SlashCommandCallbacks) 
@@ -56,255 +59,255 @@ namespace TableTopBot
         //all possible callback events that can be used
         #region Callback Adders
         public void AddApplicationCommandCreatedCallback(Func<SocketApplicationCommand, Task> f) =>
-            _client.ApplicationCommandCreated += f; 
+            Client.ApplicationCommandCreated += f; 
         
         public void AddApplicationCommandDeletedCallback(Func<SocketApplicationCommand, Task> f) =>
-            _client.ApplicationCommandDeleted += f; 
+            Client.ApplicationCommandDeleted += f; 
         
         public void AddApplicationCommandUpdatedCallback(Func<SocketApplicationCommand, Task> f) =>
-            _client.ApplicationCommandUpdated += f; 
+            Client.ApplicationCommandUpdated += f; 
         
         public void AddAutocompleteExecutedCallback(Func<SocketAutocompleteInteraction, Task> f) =>
-            _client.AutocompleteExecuted += f; 
+            Client.AutocompleteExecuted += f; 
         
         public void AddButtonExecutedCallback(Func<SocketMessageComponent, Task> f) =>
-            _client.ButtonExecuted += f; 
+            Client.ButtonExecuted += f; 
         
         public void AddChannelCreatedCallback(Func<SocketChannel, Task> f) =>
-            _client.ChannelCreated += f; 
+            Client.ChannelCreated += f; 
         
         public void AddChannelDestroyedCallback(Func<SocketChannel, Task> f) =>
-            _client.ChannelDestroyed += f; 
+            Client.ChannelDestroyed += f; 
         
         public void AddChannelUpdatedCallback(Func<SocketChannel, SocketChannel, Task> f) =>
-            _client.ChannelUpdated += f; 
+            Client.ChannelUpdated += f; 
         
         public void AddConnectedCallback(Func<Task> f) =>
-            _client.Connected += f; 
+            Client.Connected += f; 
         
         public void AddCurrentUserUpdatedCallback(Func<SocketSelfUser, SocketSelfUser, Task> f) =>
-            _client.CurrentUserUpdated += f; 
+            Client.CurrentUserUpdated += f; 
         
         public void AddDisconnectedCallback(Func<Exception, Task> f) =>
-            _client.Disconnected += f; 
+            Client.Disconnected += f; 
         
         public void AddGuildAvailableCallback(Func<SocketGuild, Task> f) =>
-            _client.GuildAvailable += f; 
+            Client.GuildAvailable += f; 
         
         public void AddGuildJoinRequestDeletedCallback(Func<Cacheable<SocketGuildUser, ulong>, SocketGuild, Task> f) =>
-            _client.GuildJoinRequestDeleted += f; 
+            Client.GuildJoinRequestDeleted += f; 
         
         public void AddGuildMembersDownloadedCallback(Func<SocketGuild, Task> f) =>
-            _client.GuildMembersDownloaded += f; 
+            Client.GuildMembersDownloaded += f; 
         
         public void AddGuildMemberUpdatedCallback(Func<Cacheable<SocketGuildUser, ulong>, SocketGuildUser, Task> f) =>
-            _client.GuildMemberUpdated += f; 
+            Client.GuildMemberUpdated += f; 
         
         public void AddGuildScheduledEventCancelledCallback(Func<SocketGuildEvent, Task> f) =>
-            _client.GuildScheduledEventCancelled += f; 
+            Client.GuildScheduledEventCancelled += f; 
         
         public void AddGuildScheduledEventCompletedCallback(Func<SocketGuildEvent, Task> f) =>
-            _client.GuildScheduledEventCompleted += f; 
+            Client.GuildScheduledEventCompleted += f; 
         
         public void AddGuildScheduledEventCreatedCallback(Func<SocketGuildEvent, Task> f) =>
-            _client.GuildScheduledEventCreated += f; 
+            Client.GuildScheduledEventCreated += f; 
         
         public void AddGuildScheduledEventUpdatedCallback(Func<Cacheable<SocketGuildEvent, ulong>, SocketGuildEvent, Task> f) =>
-            _client.GuildScheduledEventUpdated += f; 
+            Client.GuildScheduledEventUpdated += f; 
         
         public void AddGuildScheduledEventUserAddCallback(Func<Cacheable<SocketUser, RestUser, IUser, ulong>, SocketGuildEvent, Task> f) =>
-            _client.GuildScheduledEventUserAdd += f; 
+            Client.GuildScheduledEventUserAdd += f; 
         
         public void AddGuildScheduledEventUserRemoveCallback(Func<Cacheable<SocketUser, RestUser, IUser, ulong>, SocketGuildEvent, Task> f) =>
-            _client.GuildScheduledEventUserRemove += f; 
+            Client.GuildScheduledEventUserRemove += f; 
         
         public void AddGuildStickerCreatedCallback(Func<SocketCustomSticker, Task> f) =>
-            _client.GuildStickerCreated += f; 
+            Client.GuildStickerCreated += f; 
         
         public void AddGuildStickerDeletedCallback(Func<SocketCustomSticker, Task> f) =>
-            _client.GuildStickerDeleted += f; 
+            Client.GuildStickerDeleted += f; 
         
         public void AddGuildStickerUpdatedCallback(Func<SocketCustomSticker, SocketCustomSticker, Task> f) =>
-            _client.GuildStickerUpdated += f; 
+            Client.GuildStickerUpdated += f; 
         
         public void AddGuildUnavailableCallback(Func<SocketGuild, Task> f) =>
-            _client.GuildUnavailable += f; 
+            Client.GuildUnavailable += f; 
         
         public void AddGuildUpdatedCallback(Func<SocketGuild, SocketGuild, Task> f) =>
-            _client.GuildUpdated += f; 
+            Client.GuildUpdated += f; 
         
         public void AddIntegrationCreatedCallback(Func<IIntegration, Task> f) =>
-            _client.IntegrationCreated += f; 
+            Client.IntegrationCreated += f; 
         
         public void AddIntegrationDeletedCallback(Func<IGuild, ulong, Optional<ulong>, Task> f) =>
-            _client.IntegrationDeleted += f; 
+            Client.IntegrationDeleted += f; 
         
         public void AddIntegrationUpdatedCallback(Func<IIntegration, Task> f) =>
-            _client.IntegrationUpdated += f; 
+            Client.IntegrationUpdated += f; 
         
         public void AddInteractionCreatedCallback(Func<SocketInteraction, Task> f) =>
-            _client.InteractionCreated += f; 
+            Client.InteractionCreated += f; 
         
         public void AddInviteCreatedCallback(Func<SocketInvite, Task> f) =>
-            _client.InviteCreated += f; 
+            Client.InviteCreated += f; 
         
         public void AddInviteDeletedCallback(Func<SocketGuildChannel, string, Task> f) =>
-            _client.InviteDeleted += f; 
+            Client.InviteDeleted += f; 
         
         public void AddJoinedGuildCallback(Func<SocketGuild, Task> f) =>
-            _client.JoinedGuild += f; 
+            Client.JoinedGuild += f; 
         
         public void AddLatencyUpdatedCallback(Func<int, int, Task> f) =>
-            _client.LatencyUpdated += f; 
+            Client.LatencyUpdated += f; 
         
         public void AddLeftGuildCallback(Func<SocketGuild, Task> f) =>
-            _client.LeftGuild += f; 
+            Client.LeftGuild += f; 
         
         public void AddLogCallback(Func<LogMessage, Task> f) =>
-            _client.Log += f; 
+            Client.Log += f; 
         
         public void AddLoggedInCallback(Func<Task> f) =>
-            _client.LoggedIn += f; 
+            Client.LoggedIn += f; 
         
         public void AddLoggedOutCallback(Func<Task> f) =>
-            _client.LoggedOut += f; 
+            Client.LoggedOut += f; 
         
         public void AddMessageCommandExecutedCallback(Func<SocketMessageCommand, Task> f) =>
-            _client.MessageCommandExecuted += f; 
+            Client.MessageCommandExecuted += f; 
         
         public void AddMessageDeletedCallback(Func<Cacheable<IMessage, ulong>, Cacheable<IMessageChannel, ulong>, Task> f) =>
-            _client.MessageDeleted += f; 
+            Client.MessageDeleted += f; 
         
         public void AddMessageReceivedCallback(Func<SocketMessage, Task> f) =>
-            _client.MessageReceived += f; 
+            Client.MessageReceived += f; 
         
         public void AddMessagesBulkDeletedCallback(Func<IReadOnlyCollection<Cacheable<IMessage, ulong>>, Cacheable<IMessageChannel, ulong>, Task> f) =>
-            _client.MessagesBulkDeleted += f; 
+            Client.MessagesBulkDeleted += f; 
         
         public void AddMessageUpdatedCallback(Func<Cacheable<IMessage, ulong>, SocketMessage, ISocketMessageChannel, Task> f) =>
-            _client.MessageUpdated += f; 
+            Client.MessageUpdated += f; 
         
         public void AddModalSubmittedCallback(Func<SocketModal, Task> f) =>
-            _client.ModalSubmitted += f; 
+            Client.ModalSubmitted += f; 
         
         public void AddPresenceUpdatedCallback(Func<SocketUser, SocketPresence, SocketPresence, Task> f) =>
-            _client.PresenceUpdated += f; 
+            Client.PresenceUpdated += f; 
         
         public void AddReactionAddedCallback(Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task> f) =>
-            _client.ReactionAdded += f; 
+            Client.ReactionAdded += f; 
         
         public void AddReactionRemovedCallback(Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task> f) =>
-            _client.ReactionRemoved += f; 
+            Client.ReactionRemoved += f; 
         
         public void AddReactionsClearedCallback(Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, Task> f) =>
-            _client.ReactionsCleared += f; 
+            Client.ReactionsCleared += f; 
         
         public void AddReactionsRemovedForEmoteCallback(Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, IEmote, Task> f) =>
-            _client.ReactionsRemovedForEmote += f; 
+            Client.ReactionsRemovedForEmote += f; 
         
         public void AddReadyCallback(Func<Task> f) =>
-            _client.Ready += f; 
+            Client.Ready += f; 
         
         public void AddRecipientAddedCallback(Func<SocketGroupUser, Task> f) =>
-            _client.RecipientAdded += f; 
+            Client.RecipientAdded += f; 
         
         public void AddRecipientRemovedCallback(Func<SocketGroupUser, Task> f) =>
-            _client.RecipientRemoved += f; 
+            Client.RecipientRemoved += f; 
         
         public void AddRequestToSpeakCallback(Func<SocketStageChannel, SocketGuildUser, Task> f) =>
-            _client.RequestToSpeak += f; 
+            Client.RequestToSpeak += f; 
         
         public void AddRoleCreatedCallback(Func<SocketRole, Task> f) =>
-            _client.RoleCreated += f; 
+            Client.RoleCreated += f; 
         
         public void AddRoleDeletedCallback(Func<SocketRole, Task> f) =>
-            _client.RoleDeleted += f; 
+            Client.RoleDeleted += f; 
         
         public void AddRoleUpdatedCallback(Func<SocketRole, SocketRole, Task> f) =>
-            _client.RoleUpdated += f; 
+            Client.RoleUpdated += f; 
         
         public void AddSelectMenuExecutedCallback(Func<SocketMessageComponent, Task> f) =>
-            _client.SelectMenuExecuted += f; 
+            Client.SelectMenuExecuted += f; 
         
         public void AddSpeakerAddedCallback(Func<SocketStageChannel, SocketGuildUser, Task> f) =>
-            _client.SpeakerAdded += f; 
+            Client.SpeakerAdded += f; 
         
         public void AddSpeakerRemovedCallback(Func<SocketStageChannel, SocketGuildUser, Task> f) =>
-            _client.SpeakerRemoved += f; 
+            Client.SpeakerRemoved += f; 
         
         public void AddStageEndedCallback(Func<SocketStageChannel, Task> f) =>
-            _client.StageEnded += f; 
+            Client.StageEnded += f; 
         
         public void AddStageStartedCallback(Func<SocketStageChannel, Task> f) =>
-            _client.StageStarted += f; 
+            Client.StageStarted += f; 
         
         public void AddStageUpdatedCallback(Func<SocketStageChannel, SocketStageChannel, Task> f) =>
-            _client.StageUpdated += f; 
+            Client.StageUpdated += f; 
         
         public void AddThreadCreatedCallback(Func<SocketThreadChannel, Task> f) =>
-            _client.ThreadCreated += f; 
+            Client.ThreadCreated += f; 
         
         public void AddThreadDeletedCallback(Func<Cacheable<SocketThreadChannel, ulong>, Task> f) =>
-            _client.ThreadDeleted += f; 
+            Client.ThreadDeleted += f; 
         
         public void AddThreadMemberJoinedCallback(Func<SocketThreadUser, Task> f) =>
-            _client.ThreadMemberJoined += f; 
+            Client.ThreadMemberJoined += f; 
         
         public void AddThreadMemberLeftCallback(Func<SocketThreadUser, Task> f) =>
-            _client.ThreadMemberLeft += f; 
+            Client.ThreadMemberLeft += f; 
         
         public void AddThreadUpdatedCallback(Func<Cacheable<SocketThreadChannel, ulong>, SocketThreadChannel, Task> f) =>
-            _client.ThreadUpdated += f; 
+            Client.ThreadUpdated += f; 
         
         public void AddUserBannedCallback(Func<SocketUser, SocketGuild, Task> f) =>
-            _client.UserBanned += f; 
+            Client.UserBanned += f; 
         
         public void AddUserCommandExecutedCallback(Func<SocketUserCommand, Task> f) =>
-            _client.UserCommandExecuted += f; 
+            Client.UserCommandExecuted += f; 
         
         public void AddUserIsTypingCallback(Func<Cacheable<IUser, ulong>, Cacheable<IMessageChannel, ulong>, Task> f) =>
-            _client.UserIsTyping += f; 
+            Client.UserIsTyping += f; 
         
         public void AddUserJoinedCallback(Func<SocketGuildUser, Task> f) =>
-            _client.UserJoined += f; 
+            Client.UserJoined += f; 
         
         public void AddUserLeftCallback(Func<SocketGuild, SocketUser, Task> f) =>
-            _client.UserLeft += f; 
+            Client.UserLeft += f; 
         
         public void AddUserUnbannedCallback(Func<SocketUser, SocketGuild, Task> f) =>
-            _client.UserUnbanned += f; 
+            Client.UserUnbanned += f; 
         
         public void AddUserUpdatedCallback(Func<SocketUser, SocketUser, Task> f) =>
-            _client.UserUpdated += f;
+            Client.UserUpdated += f;
         
         public void AddUserVoiceStateUpdatedCallback(Func<SocketUser, SocketVoiceState, SocketVoiceState, Task> f) =>
-            _client.UserVoiceStateUpdated += f;
+            Client.UserVoiceStateUpdated += f;
         
         public void AddVoiceServerUpdatedCallback(Func<SocketVoiceServer, Task> f) =>
-            _client.VoiceServerUpdated += f;
+            Client.VoiceServerUpdated += f;
         
         public void AddWebhooksUpdatedCallback(Func<SocketGuild, SocketChannel, Task> f) =>
-            _client.WebhooksUpdated += f;
+            Client.WebhooksUpdated += f;
         #endregion
 
         //Changed for channel checking
         public void AddSlashCommandExecutedCallback(Func<SocketSlashCommand, Task> f) =>
-            _slashCommandCallbacks.Add(f);
+            SlashCommandCallbacks.Add(f);
 
         public async void AddGuildCommand(SlashCommandBuilder builder)
         {
-            try { await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_builder.Build()); }
+            try { await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(builder.Build()); }
             catch (Exception ex) { Debug.WriteLine(ex); }
         }
-        private async Task AwaitConsoleCommands()
+        private Task AwaitConsoleCommands()
         {
-            await Task.Delay(3000);
             Console.Write("> ");
             string? input = Console.ReadLine();
             while(input == null || input != "Quit") {
                 Console.Write("Command not recognized\n> ");
                 input = Console.ReadLine(); 
             }
+            return Task.CompletedTask;
         }
     }
     //A class to be overridden to create modules

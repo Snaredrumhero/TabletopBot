@@ -241,6 +241,7 @@ namespace TableTopBot
                 return Task.CompletedTask;
             });
             Bot.AddSlashCommandExecutedCallback(SlashCallbacks);
+            Bot.AddButtonExecutedCallback(ButtonListener);
         }
 
         //Listeners
@@ -253,19 +254,27 @@ namespace TableTopBot
             switch (_command.CommandName)
             {
                 case "start":
-                    //add confirmation (embed with button would be a good solution)
-                    //opens the all day command channel to all
-                    xpSystem.Clear();
+                    await GetConfirmation(_command, () =>
+                    {
+                        //opens the all day command channel to all
+                        xpSystem.Clear();
+                        return Task.CompletedTask;
+                    });
                     break;
                 case "end":
-                    //add confirmation (embed with button would be a good solution)
-                    //displays the top 3 users to the all-day announcements channel for prizes
-                    //could display overall statistics for the all-day as well
-                    //closes the all day command channel from all
+                    await GetConfirmation(_command, () =>
+                    {
+                        //displays the top 3 users to the all-day announcements channel for prizes
+                        //could display overall statistics for the all-day as well
+                        //closes the all day command channel from all
+                        return Task.CompletedTask;
+                    });
                     break;
                 case "draw-raffle":
-                    //add confirmation (embed with button would be a good solution)
-                    await Bot.AnnouncementChannel().SendMessageAsync(xpSystem.DrawRaffle());
+                    await GetConfirmation(_command, async () =>
+                    {
+                        await Bot.AnnouncementChannel().SendMessageAsync(xpSystem.DrawRaffle());
+                    });
                     break;
                 case "see-player":
                     embed.AddField("Player Data", xpSystem.GetUser(((SocketGuildUser)options[0].Value).Id).ToString());
@@ -275,16 +284,25 @@ namespace TableTopBot
                     //shows the entire profile of the top x users
                     break;
                 case "remove-player-game":
-                    //add confirmation (embed with button would be a good solution)
-                    //removes a game from a player
+                    await GetConfirmation(_command, () =>
+                    {
+                        //removes a game from a player
+                        return Task.CompletedTask;
+                    });
                     break;
                 case "remove-player-achievement":
-                    //add confirmation (embed with button would be a good solution)
-                    //removes an achievement from a player
+                    await GetConfirmation(_command, () =>
+                    {
+                        //removes an achievement from a player
+                        return Task.CompletedTask;
+                    });
                     break;
                 case "remove-player":
-                    //add confirmation (embed with button would be a good solution)
-                    //removes a player from the event
+                    await GetConfirmation(_command, () =>
+                    {
+                        //removes a player from the event
+                        return Task.CompletedTask;
+                    });
                     break;
                 case "join-event":
                     string PID = (string)options[0].Value;
@@ -293,8 +311,10 @@ namespace TableTopBot
                     xpSystem.AddNewUser(_command.User.Id, PID);
                     break;
                 case "leave-event":
-                    //add confirmation (embed with button would be a good solution)
-                    xpSystem.RemoveUser(xpSystem.GetUser(_command.User.Id));
+                    await GetConfirmation(_command, () => {
+                        xpSystem.RemoveUser(xpSystem.GetUser(_command.User.Id));
+                        return Task.CompletedTask;
+                    });
                     break;
                 case "see-self":
                     embed.AddField("Your Data", xpSystem.GetUser(_command.User.Id).ToString());
@@ -304,18 +324,47 @@ namespace TableTopBot
                     //Adds a game to the caller's profile
                     break;
                 case "remove-game":
-                    //add confirmation (embed with button would be a good solution)
-                    //Removes a game from the caller's profile
+                    await GetConfirmation(_command, () =>
+                    {
+                        //Removes a game from the caller's profile
+                        return Task.CompletedTask;
+                    });
                     break;
                 case "add-achievement":
                     //Adds an achivement to the caller's profile
                     break;
                 case "remove-achievement":
-                    //add confirmation (embed with button would be a good solution)
-                    //Removes an achivement from the caller's profile
+                    await GetConfirmation(_command, () =>
+                    {
+                        //Removes an achivement from the caller's profile
+                        return Task.CompletedTask;
+                    });
                     break;
                 default:
                     throw new MissingMethodException(message: $"No definition for commad: {_command.CommandName}");
+            }
+        }
+
+        //Confirmation stuff
+        private Dictionary<string, Func<Task>> Buttons = new Dictionary<string, Func<Task>>();
+        static ulong buttonsCreated = 0;
+        private async Task GetConfirmation(SocketSlashCommand _command, Func<Task> _task)
+        {
+            EmbedBuilder embed = new EmbedBuilder();
+            ButtonBuilder bb = new ButtonBuilder("Confirm", buttonsCreated.ToString(), ButtonStyle.Danger);
+            buttonsCreated++;
+            ButtonComponent button = bb.Build();
+            embed.AddField("Confirm", button);
+            Buttons.Add(button.CustomId, _task);
+            await _command.RespondAsync(embed: embed.Build(), ephemeral: true);
+        }
+
+        public async Task ButtonListener(SocketMessageComponent _button)
+        {
+            if (Buttons.ContainsKey(_button.Data.CustomId))
+            {
+                await Buttons[_button.Data.CustomId]();
+                Buttons.Remove(_button.Data.CustomId);
             }
         }
     }
