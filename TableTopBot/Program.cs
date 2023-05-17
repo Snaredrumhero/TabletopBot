@@ -39,7 +39,6 @@ namespace TableTopBot
             //run bot
             await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
             await Client.StartAsync();
-            while (Client.LoginState != LoginState.LoggedIn) { }
             await AwaitConsoleCommands();
             await Server().DeleteApplicationCommandsAsync();
             await Client.LogoutAsync();
@@ -294,7 +293,7 @@ namespace TableTopBot
         public void AddSlashCommandExecutedCallback(Func<SocketSlashCommand, Task> f) =>
             SlashCommandCallbacks.Add(f);
 
-        public async void AddGuildCommand(SlashCommandBuilder builder)
+        public async Task AddGuildCommand(SlashCommandBuilder builder)
         {
             try { await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(builder.Build()); }
             catch (Exception ex) { Debug.WriteLine(ex); }

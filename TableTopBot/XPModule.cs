@@ -12,7 +12,7 @@ namespace TableTopBot
 
         public override void InitilizeModule()
         {
-            Bot.AddConnectedCallback(() =>
+            Bot.AddConnectedCallback(async () =>
             {
                 //officer only
                 //start
@@ -22,7 +22,7 @@ namespace TableTopBot
                     Description = "starts the all-day event.",
                     DefaultMemberPermissions = GuildPermission.KickMembers,
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //end
                 command = new SlashCommandBuilder()
                 {
@@ -30,7 +30,7 @@ namespace TableTopBot
                     Description = "ends the all-day event.",
                     DefaultMemberPermissions = GuildPermission.KickMembers,
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //draw raffle
                 command = new SlashCommandBuilder()
                 {
@@ -38,7 +38,7 @@ namespace TableTopBot
                     Description = "draws a raffle ticket",
                     DefaultMemberPermissions = GuildPermission.KickMembers,
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //see player
                 command = new SlashCommandBuilder()
                 {
@@ -54,7 +54,7 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //show top x users
                 command = new SlashCommandBuilder()
                 {
@@ -70,7 +70,7 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //remove player game
                 command = new SlashCommandBuilder()
                 {
@@ -92,7 +92,7 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //remove player achievement
                 command = new SlashCommandBuilder()
                 {
@@ -114,7 +114,7 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //remove user
                 command = new SlashCommandBuilder()
                 {
@@ -130,7 +130,7 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
 
                 //anyone
                 //init user
@@ -147,21 +147,21 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //withdraw
                 command = new SlashCommandBuilder()
                 {
                     Name = "leave-event",
                     Description = "unregisters you from the current event",
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //see self
                 command = new SlashCommandBuilder()
                 {
                     Name = "see-self",
                     Description = "shows you your stats",
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //add game
                 command = new SlashCommandBuilder()
                 {
@@ -194,7 +194,7 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //remove game
                 command = new SlashCommandBuilder()
                 {
@@ -209,7 +209,7 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //add achivement
                 command = new SlashCommandBuilder()
                 {
@@ -224,7 +224,7 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
+                await Bot.AddGuildCommand(command);
                 //remove achievement
                 command = new SlashCommandBuilder()
                 {
@@ -239,8 +239,8 @@ namespace TableTopBot
                         },
                     },
                 };
-                Bot.AddGuildCommand(command);
-                return Task.CompletedTask;
+                await Bot.AddGuildCommand(command);
+                Console.WriteLine("Commands Initalized");
             });
             Bot.AddSlashCommandExecutedCallback(SlashCallbacks);
             Bot.AddButtonExecutedCallback(ButtonListener);
