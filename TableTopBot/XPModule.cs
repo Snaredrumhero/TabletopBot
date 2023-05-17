@@ -1,5 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace TableTopBot
 {
@@ -350,13 +352,11 @@ namespace TableTopBot
         static ulong buttonsCreated = 0;
         private async Task GetConfirmation(SocketSlashCommand _command, Func<Task> _task)
         {
-            EmbedBuilder embed = new EmbedBuilder();
-            ButtonBuilder bb = new ButtonBuilder("Confirm", buttonsCreated.ToString(), ButtonStyle.Danger);
+            ComponentBuilder cb = new ComponentBuilder();
+            cb.WithButton("Confirm", buttonsCreated.ToString(), ButtonStyle.Danger);
+            Buttons.Add(buttonsCreated.ToString(), _task);
             buttonsCreated++;
-            ButtonComponent button = bb.Build();
-            embed.AddField("Confirm", button);
-            Buttons.Add(button.CustomId, _task);
-            await _command.RespondAsync(embed: embed.Build(), ephemeral: true);
+            await _command.RespondAsync(ephemeral: true, components: cb.Build());
         }
 
         public async Task ButtonListener(SocketMessageComponent _button)
