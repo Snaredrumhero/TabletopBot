@@ -256,7 +256,7 @@ namespace TableTopBot
                 case "start":
                     await GetConfirmation(_command, () =>
                     {
-                        //opens the all day command channel to all
+                        Bot.CommandChannel().AddPermissionOverwriteAsync(Bot.Server().EveryoneRole, OverwritePermissions.DenyAll(Bot.CommandChannel()).Modify(viewChannel: PermValue.Allow, useApplicationCommands: PermValue.Allow, sendMessages: PermValue.Allow));
                         xpSystem.Clear();
                         return Task.CompletedTask;
                     });
@@ -266,7 +266,7 @@ namespace TableTopBot
                     {
                         //displays the top 3 users to the all-day announcements channel for prizes
                         //could display overall statistics for the all-day as well
-                        //closes the all day command channel from all
+                        Bot.CommandChannel().AddPermissionOverwriteAsync(Bot.Server().EveryoneRole, OverwritePermissions.DenyAll(Bot.CommandChannel()));
                         return Task.CompletedTask;
                     });
                     break;
