@@ -33,8 +33,7 @@ namespace TableTopBot
             Client.SlashCommandExecuted += ClientSlashCommandExecuted;
             
             //Init all moduels
-            new PingPong(this);
-            new XPModule(this);
+            new XPModule(this).InitilizeModule();
 
             //run bot
             await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
@@ -316,11 +315,7 @@ namespace TableTopBot
         protected Program Bot;
 
         //Constructor
-        public Module(Program bot)
-        {
-            Bot = bot;
-            InitilizeModule();
-        }
+        public Module(Program bot) { Bot = bot; }
 
         //Adds all events to the client
         public abstract void InitilizeModule();

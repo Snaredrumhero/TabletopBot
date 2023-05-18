@@ -1,7 +1,5 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using System.ComponentModel;
-using System.Diagnostics;
 
 namespace TableTopBot
 {
@@ -363,6 +361,8 @@ namespace TableTopBot
         {
             if (Buttons.ContainsKey(_button.Data.CustomId))
             {
+                await _button.DeferAsync();
+                await _button.DeleteOriginalResponseAsync();
                 await Buttons[_button.Data.CustomId]();
                 Buttons.Remove(_button.Data.CustomId);
             }
