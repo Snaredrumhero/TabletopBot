@@ -131,7 +131,7 @@ namespace TableTopBot
                 await Bot.AddGuildCommand(command);
 
                 //anyone
-                //init user
+                //join event
                 command = new SlashCommandBuilder()
                 {
                     Name = "join-event",
@@ -247,8 +247,6 @@ namespace TableTopBot
         //Listeners
         public async Task SlashCallbacks(SocketSlashCommand _command)
         {
-            //most commands should have ephemerial responses
-            //add logging to all commands
             List<SocketSlashCommandDataOption> options = _command.Data.Options.ToList();
             EmbedBuilder embed = new EmbedBuilder();
             switch (_command.CommandName)
@@ -343,6 +341,10 @@ namespace TableTopBot
                 default:
                     throw new MissingMethodException(message: $"No definition for commad: {_command.CommandName}");
             }
+            string log = $"User: {_command.User.Username}\nCommand: {_command.CommandName}\nParams: ";
+            foreach (SocketSlashCommandDataOption o in _command.Data.Options.ToList())
+                log += $"\n{o.Name}: {o.Value}";
+            await Bot.LogChannel().SendMessageAsync(log);
         }
 
         //Confirmation stuff
