@@ -5,77 +5,109 @@ namespace TableTopBot
 {
     internal class XPModule : Module
     {
+        public SocketTextChannel AnnouncementChannel() => Bot.Server().GetTextChannel(1106217661194571806);
+        public SocketTextChannel CommandChannel() => Bot.Server().GetTextChannel(1104487160226258964);
+
         private XpStorage xpSystem = new XpStorage();
         public XPModule(Program _bot) : base(_bot) { }
 
-        public override void InitilizeModule()
+        public override Task InitilizeModule()
         {
             Bot.AddConnectedCallback(async () =>
             {
-                //officer only
-                //start
-                SlashCommandBuilder command = new SlashCommandBuilder()
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "start",
-                    Description = "starts the all-day event.",
-                    DefaultMemberPermissions = GuildPermission.KickMembers,
-                };
-                await Bot.AddGuildCommand(command);
-                //end
-                command = new SlashCommandBuilder()
+                    name = "start",
+                    description = "starts the all-day event.",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        CommandChannel().AddPermissionOverwriteAsync(Bot.Server().EveryoneRole, OverwritePermissions.DenyAll(CommandChannel()).Modify(viewChannel: PermValue.Allow, useApplicationCommands: PermValue.Allow, sendMessages: PermValue.Allow));
+                        xpSystem.Clear();
+                        return Task.CompletedTask;
+                    },
+                    modOnly = true,
+                    requiresConfirmation = true,
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "end",
-                    Description = "ends the all-day event.",
-                    DefaultMemberPermissions = GuildPermission.KickMembers,
-                };
-                await Bot.AddGuildCommand(command);
-                //draw raffle
-                command = new SlashCommandBuilder()
+                    name = "end",
+                    description = "ends the all-day event.",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        //displays the top 3 users to the all-day announcements channel for prizes
+                        //could display overall statistics for the all-day as well
+                        CommandChannel().AddPermissionOverwriteAsync(Bot.Server().EveryoneRole, OverwritePermissions.DenyAll(CommandChannel()));
+                        return Task.CompletedTask;
+                    },
+                    modOnly = true,
+                    requiresConfirmation = true,
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "draw-raffle",
-                    Description = "draws a raffle ticket",
-                    DefaultMemberPermissions = GuildPermission.KickMembers,
-                };
-                await Bot.AddGuildCommand(command);
-                //see player
-                command = new SlashCommandBuilder()
+                    name = "draw-raffle",
+                    description = "draws a raffle ticket",
+                    callback = async (SocketSlashCommand _command) =>
+                    {
+                        await AnnouncementChannel().SendMessageAsync(xpSystem.DrawRaffle());
+                    },
+                    modOnly = true,
+                    requiresConfirmation = true,
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "see-player",
-                    Description = "view a player's profile",
-                    DefaultMemberPermissions = GuildPermission.KickMembers,
-                    Options = new List<SlashCommandOptionBuilder>() { 
+                    name = "see-player",
+                    description = "view a player's profile",
+                    callback = async (SocketSlashCommand _command) =>
+                    {
+                        await _command.RespondAsync(embed: (new EmbedBuilder().AddField("Player Data", xpSystem.GetUser(((SocketGuildUser)_command.Data.Options.First().Value).Id).ToString())).Build(), ephemeral: true);
+                    },
+                    modOnly = true,
+                    options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
                             Name = "player",
                             Type = ApplicationCommandOptionType.User,
                             Description = "the user to see",
                             IsRequired = true,
                         },
-                    },
-                };
-                await Bot.AddGuildCommand(command);
-                //show top x users
-                command = new SlashCommandBuilder()
+                    }
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "show-x-users",
-                    Description = "shows a leaderboard",
-                    DefaultMemberPermissions = GuildPermission.KickMembers,
-                    Options = new List<SlashCommandOptionBuilder>() { 
+                    name = "show-x-users",
+                    description = "shows a leaderboard",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        //shows the entire profile of the top x users
+                        return Task.CompletedTask;
+                    },
+                    modOnly = true,
+                    options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
                             Name = "x",
                             Type = ApplicationCommandOptionType.Integer,
                             Description = "the number of users to see",
                             IsRequired = true,
                         },
-                    },
-                };
-                await Bot.AddGuildCommand(command);
-                //remove player game
-                command = new SlashCommandBuilder()
+                    }
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "remove-player-game",
-                    Description = "removes a game from a player's profile",
-                    DefaultMemberPermissions = GuildPermission.KickMembers,
-                    Options = new List<SlashCommandOptionBuilder>() {
+                    name = "remove-player-game",
+                    description = "removes a game from a player's profile",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        //removes a game from a player
+                        return Task.CompletedTask;
+                    },
+                    modOnly = true,
+                    requiresConfirmation = true,
+                    options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
                             Name = "player",
                             Type = ApplicationCommandOptionType.User,
@@ -89,17 +121,22 @@ namespace TableTopBot
                             IsRequired = true,
                         },
                     },
-                };
-                await Bot.AddGuildCommand(command);
-                //remove player achievement
-                command = new SlashCommandBuilder()
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "remove-player-achievement",
-                    Description = "removes an achievement from a player's profile",
-                    DefaultMemberPermissions = GuildPermission.KickMembers,
-                    Options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "player",
+                    name = "remove-player-achievement",
+                    description = "removes an achievement from a player's profile",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        //removes an achievement from a player
+                        return Task.CompletedTask;
+                    },
+                    modOnly = true,
+                    requiresConfirmation = true,
+                    options = new List<SlashCommandOptionBuilder>() {
+                        new SlashCommandOptionBuilder() {
+                            Name = "user",
                             Type = ApplicationCommandOptionType.User,
                             Description = "the user",
                             IsRequired = true,
@@ -111,15 +148,20 @@ namespace TableTopBot
                             IsRequired = true,
                         },
                     },
-                };
-                await Bot.AddGuildCommand(command);
-                //remove user
-                command = new SlashCommandBuilder()
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "remove-player",
-                    Description = "removes a player's profile",
-                    DefaultMemberPermissions = GuildPermission.KickMembers,
-                    Options = new List<SlashCommandOptionBuilder>(){
+                    name = "remove-player",
+                    description = "removes a player's profile",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        //removes a player from the event
+                        return Task.CompletedTask;
+                    },
+                    modOnly = true,
+                    requiresConfirmation = true,
+                    options = new List<SlashCommandOptionBuilder>(){
                         new SlashCommandOptionBuilder(){
                             Name = "player",
                             Type = ApplicationCommandOptionType.User,
@@ -127,16 +169,25 @@ namespace TableTopBot
                             IsRequired = true,
                         },
                     },
-                };
-                await Bot.AddGuildCommand(command);
-
-                //anyone
-                //join event
-                command = new SlashCommandBuilder()
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "join-event",
-                    Description = "registers you for the current event",
-                    Options = new List<SlashCommandOptionBuilder>() {
+                    name = "join-event",
+                    description = "registers you for the current event",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        string PID = (string)_command.Data.Options.First().Value;
+                        if (PID[0] != 'P' || PID.Length != 10)
+                            throw new InvalidDataException(message: "Invalid PID.");
+                        for (int i = 1; i < 10; i++)
+                            if (PID[i] < '0' || PID[i] > '9')
+                                throw new InvalidDataException(message: "Invalid PID.");
+
+                        xpSystem.AddNewUser(_command.User.Id, PID);
+                        return Task.CompletedTask;
+                    },
+                    options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
                             Name = "PID",
                             Type = ApplicationCommandOptionType.String,
@@ -144,28 +195,40 @@ namespace TableTopBot
                             IsRequired = true,
                         },
                     },
-                };
-                await Bot.AddGuildCommand(command);
-                //withdraw
-                command = new SlashCommandBuilder()
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "leave-event",
-                    Description = "unregisters you from the current event",
-                };
-                await Bot.AddGuildCommand(command);
-                //see self
-                command = new SlashCommandBuilder()
+                    name = "leave-event",
+                    description = "unregisters you from the current event",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        xpSystem.RemoveUser(xpSystem.GetUser(_command.User.Id));
+                        return Task.CompletedTask;
+                    },
+                    requiresConfirmation = true,
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "see-self",
-                    Description = "shows you your stats",
-                };
-                await Bot.AddGuildCommand(command);
-                //add game
-                command = new SlashCommandBuilder()
+                    name = "see-self",
+                    description = "shows you your stats",
+                    callback = async (SocketSlashCommand _command) =>
+                    {
+                        await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Data", xpSystem.GetUser(_command.User.Id).ToString()).Build(), ephemeral: true);
+                    },
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "add-game",
-                    Description = "adds a game to your profile",
-                    Options = new List<SlashCommandOptionBuilder>() {
+                    name = "add-game",
+                    description = "adds a game to your profile",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        //Adds a game to the caller's profile
+                        return Task.CompletedTask;
+                    },
+                    options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
                             Name = "type",
                             Type = ApplicationCommandOptionType.String,
@@ -191,14 +254,19 @@ namespace TableTopBot
                             IsRequired = true,
                         },
                     },
-                };
-                await Bot.AddGuildCommand(command);
-                //remove game
-                command = new SlashCommandBuilder()
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "remove-game",
-                    Description = "removes a game from a your profile",
-                    Options = new List<SlashCommandOptionBuilder>() {
+                    name = "remove-game",
+                    description = "removes a game from a your profile",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        //Removes a game from the caller's profile
+                        return Task.CompletedTask;
+                    },
+                    requiresConfirmation = true,
+                    options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
                             Name = "id",
                             Type = ApplicationCommandOptionType.Integer,
@@ -206,14 +274,18 @@ namespace TableTopBot
                             IsRequired = true,
                         },
                     },
-                };
-                await Bot.AddGuildCommand(command);
-                //add achivement
-                command = new SlashCommandBuilder()
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "add-achievement",
-                    Description = "adds an achievement to your profile",
-                    Options = new List<SlashCommandOptionBuilder>() {
+                    name = "add-achievement",
+                    description = "",
+                    callback = (SocketSlashCommand _command) =>
+                    {
+                        //Adds an achivement to the caller's profile
+                        return Task.CompletedTask;
+                    },
+                    options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
                             Name = "id",
                             Type = ApplicationCommandOptionType.String,
@@ -221,153 +293,30 @@ namespace TableTopBot
                             IsRequired = true,
                         },
                     },
-                };
-                await Bot.AddGuildCommand(command);
-                //remove achievement
-                command = new SlashCommandBuilder()
+                });
+                //
+                await Bot.AddCommand(new Program.Command()
                 {
-                    Name = "remove-achievement",
-                    Description = "removes an achievement from your profile",
-                    Options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "id",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "the achievement's name",
-                            IsRequired = true,
-                        },
-                    },
-                };
-                await Bot.AddGuildCommand(command);
-                Console.WriteLine("Commands Initalized");
-            });
-            Bot.AddSlashCommandExecutedCallback(SlashCallbacks);
-            Bot.AddButtonExecutedCallback(ButtonListener);
-        }
-
-        //Listeners
-        public async Task SlashCallbacks(SocketSlashCommand _command)
-        {
-            List<SocketSlashCommandDataOption> options = _command.Data.Options.ToList();
-            EmbedBuilder embed = new EmbedBuilder();
-            switch (_command.CommandName)
-            {
-                case "start":
-                    await GetConfirmation(_command, () =>
-                    {
-                        Bot.CommandChannel().AddPermissionOverwriteAsync(Bot.Server().EveryoneRole, OverwritePermissions.DenyAll(Bot.CommandChannel()).Modify(viewChannel: PermValue.Allow, useApplicationCommands: PermValue.Allow, sendMessages: PermValue.Allow));
-                        xpSystem.Clear();
-                        return Task.CompletedTask;
-                    });
-                    break;
-                case "end":
-                    await GetConfirmation(_command, () =>
-                    {
-                        //displays the top 3 users to the all-day announcements channel for prizes
-                        //could display overall statistics for the all-day as well
-                        Bot.CommandChannel().AddPermissionOverwriteAsync(Bot.Server().EveryoneRole, OverwritePermissions.DenyAll(Bot.CommandChannel()));
-                        return Task.CompletedTask;
-                    });
-                    break;
-                case "draw-raffle":
-                    await GetConfirmation(_command, async () =>
-                    {
-                        await Bot.AnnouncementChannel().SendMessageAsync(xpSystem.DrawRaffle());
-                    });
-                    break;
-                case "see-player":
-                    embed.AddField("Player Data", xpSystem.GetUser(((SocketGuildUser)options[0].Value).Id).ToString());
-                    await _command.RespondAsync(embed: embed.Build(), ephemeral: true);
-                    break;
-                case "show-x-users":
-                    //shows the entire profile of the top x users
-                    break;
-                case "remove-player-game":
-                    await GetConfirmation(_command, () =>
-                    {
-                        //removes a game from a player
-                        return Task.CompletedTask;
-                    });
-                    break;
-                case "remove-player-achievement":
-                    await GetConfirmation(_command, () =>
-                    {
-                        //removes an achievement from a player
-                        return Task.CompletedTask;
-                    });
-                    break;
-                case "remove-player":
-                    await GetConfirmation(_command, () =>
-                    {
-                        //removes a player from the event
-                        return Task.CompletedTask;
-                    });
-                    break;
-                case "join-event":
-                    string PID = (string)options[0].Value;
-                    if (PID[0] != 'P' || PID.Length != 10) //Check if the last 9 are numbers
-                        throw new InvalidDataException(message: "Invalid PID.");
-                    xpSystem.AddNewUser(_command.User.Id, PID);
-                    break;
-                case "leave-event":
-                    await GetConfirmation(_command, () => {
-                        xpSystem.RemoveUser(xpSystem.GetUser(_command.User.Id));
-                        return Task.CompletedTask;
-                    });
-                    break;
-                case "see-self":
-                    embed.AddField("Your Data", xpSystem.GetUser(_command.User.Id).ToString());
-                    await _command.RespondAsync(embed: embed.Build(), ephemeral: true);
-                    break;
-                case "add-game":
-                    //Adds a game to the caller's profile
-                    break;
-                case "remove-game":
-                    await GetConfirmation(_command, () =>
-                    {
-                        //Removes a game from the caller's profile
-                        return Task.CompletedTask;
-                    });
-                    break;
-                case "add-achievement":
-                    //Adds an achivement to the caller's profile
-                    break;
-                case "remove-achievement":
-                    await GetConfirmation(_command, () =>
+                    name = "remove-achievement",
+                    description = "removes an achievement from your profile",
+                    callback = (SocketSlashCommand _command) =>
                     {
                         //Removes an achivement from the caller's profile
                         return Task.CompletedTask;
-                    });
-                    break;
-                default:
-                    throw new MissingMethodException(message: $"No definition for commad: {_command.CommandName}");
-            }
-            string log = $"User: {_command.User.Username}\nCommand: {_command.CommandName}\nParams: ";
-            foreach (SocketSlashCommandDataOption o in _command.Data.Options.ToList())
-                log += $"\n{o.Name}: {o.Value}";
-            await Bot.LogChannel().SendMessageAsync(log);
-        }
-
-        //Confirmation stuff
-        private Dictionary<string, Func<Task>> Buttons = new Dictionary<string, Func<Task>>();
-        static ulong buttonsCreated = 0;
-        private async Task GetConfirmation(SocketSlashCommand _command, Func<Task> _task)
-        {
-            ComponentBuilder cb = new ComponentBuilder();
-            cb.WithButton("Confirm", buttonsCreated.ToString(), ButtonStyle.Danger);
-            Buttons.Add(buttonsCreated.ToString(), _task);
-            buttonsCreated++;
-            await _command.RespondAsync(ephemeral: true, components: cb.Build());
-        }
-
-        public async Task ButtonListener(SocketMessageComponent _button)
-        {
-            if (Buttons.ContainsKey(_button.Data.CustomId))
-            {
-                await _button.DeferAsync();
-                await _button.DeleteOriginalResponseAsync();
-                await Buttons[_button.Data.CustomId]();
-                Buttons.Remove(_button.Data.CustomId);
-            }
+                    },
+                    requiresConfirmation = true,
+                    options = new List<SlashCommandOptionBuilder>() {
+                        new SlashCommandOptionBuilder(){
+                            Name = "id",
+                            Type = ApplicationCommandOptionType.String,
+                            Description = "the achievement's name",
+                            IsRequired = true,
+                        },
+                    },
+                });
+                Console.WriteLine("Commands Initalized");
+            });
+            return Task.CompletedTask;
         }
     }
 }

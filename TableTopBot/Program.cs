@@ -12,11 +12,7 @@ namespace TableTopBot
         private DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
         //Channels
         public SocketGuild Server() => Client.GetGuild(1047337930965909646);
-        public SocketTextChannel CommandChannel() => Server().GetTextChannel(1104487160226258964);
-        public SocketTextChannel AnnouncementChannel() => Server().GetTextChannel(1106217661194571806);
         public SocketTextChannel LogChannel() => Server().GetTextChannel(1106257696388296754);
-        //All slash commands
-        private List<Func<SocketSlashCommand, Task>> SlashCommandCallbacks = new List<Func<SocketSlashCommand, Task>>();
         
         public static Task Main(string[] args) => new Program().MainAsync();
 
@@ -25,15 +21,37 @@ namespace TableTopBot
             Console.Title = "TabletopBot";
             InteractionService interactionService = new InteractionService(Client.Rest);
             //Required Lambdas
-            Client.Log += (LogMessage msg) =>
+            Client.Log += (LogMessage msg) => //Console logging
             {
                 Console.WriteLine(msg.ToString());
                 return Task.CompletedTask;
             };
-            Client.SlashCommandExecuted += ClientSlashCommandExecuted;
+            Client.SlashCommandExecuted += async (SocketSlashCommand _command) => //Command logging
+            {
+                string log = $"User: {_command.User.Username}\nCommand: {_command.CommandName}\nParams: ";
+                foreach (SocketSlashCommandDataOption o in _command.Data.Options.ToList())
+                    log += $"\n{o.Name}: {o.Value}";
+                await LogChannel().SendMessageAsync(log);
+            };
+            Client.SlashCommandExecuted += async (SocketSlashCommand _command) => //command calls
+            {
+                if (Callbacks.ContainsKey(_command.CommandId))
+                    try { await Callbacks[_command.CommandId](_command); }
+                    catch (Exception ex) { await _command.RespondAsync(text: "Error, " + ex.Message, ephemeral: true); }
+            };
+            Client.ButtonExecuted += async (SocketMessageComponent _button) => //confirmation
+            { 
+                if (Buttons.ContainsKey(_button.Data.CustomId))
+                {
+                    await _button.DeferAsync();
+                    await _button.DeleteOriginalResponseAsync();
+                    await Buttons[_button.Data.CustomId].Item1(Buttons[_button.Data.CustomId].Item2);
+                    Buttons.Remove(_button.Data.CustomId);
+                }
+            };
             
             //Init all moduels
-            new XPModule(this).InitilizeModule();
+            await new XPModule(this).InitilizeModule();
 
             //run bot
             await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
@@ -42,16 +60,6 @@ namespace TableTopBot
             await Server().DeleteApplicationCommandsAsync();
             await Client.LogoutAsync();
             
-        }
-
-        private async Task ClientSlashCommandExecuted(SocketSlashCommand command)
-        {
-            //Guard clause: Only execute in approved channels
-            if (CommandChannel().Id != command.ChannelId)
-                return;
-            //Execute each callback in SlashCommandCallbacks
-            foreach (Func<SocketSlashCommand, Task> callback in SlashCommandCallbacks) 
-                await callback(command);
         }
 
         //all possible callback events that can be used
@@ -225,8 +233,11 @@ namespace TableTopBot
             Client.RoleUpdated += f; 
         
         public void AddSelectMenuExecutedCallback(Func<SocketMessageComponent, Task> f) =>
-            Client.SelectMenuExecuted += f; 
-        
+            Client.SelectMenuExecuted += f;
+
+        public void AddSlashCommandExecutedCallback(Func<SocketSlashCommand, Task> f) =>
+            Client.SlashCommandExecuted += f;
+
         public void AddSpeakerAddedCallback(Func<SocketStageChannel, SocketGuildUser, Task> f) =>
             Client.SpeakerAdded += f; 
         
@@ -288,10 +299,6 @@ namespace TableTopBot
             Client.WebhooksUpdated += f;
         #endregion
 
-        //Changed for channel checking
-        public void AddSlashCommandExecutedCallback(Func<SocketSlashCommand, Task> f) =>
-            SlashCommandCallbacks.Add(f);
-
         public async Task AddGuildCommand(SlashCommandBuilder builder)
         {
             try { await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(builder.Build()); }
@@ -307,6 +314,47 @@ namespace TableTopBot
             }
             return Task.CompletedTask;
         }
+
+        //Commands
+        private static Dictionary<ulong, Func<SocketSlashCommand, Task>> Callbacks = new Dictionary<ulong, Func<SocketSlashCommand, Task>>();
+        private static Dictionary<string, Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>> Buttons = new Dictionary<string, Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>>();
+        public async Task AddCommand(Command _command)
+        {
+            try  { Callbacks.Add((await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.GetCallback()); }
+            catch (Exception ex) { Debug.WriteLine(ex); }
+        }
+        public class Command
+        {
+            private static ulong buttonsCreated = 0;
+            public Command() { }
+            public string name = "";
+            public string description = "";
+            public bool modOnly = false;
+            public bool requiresConfirmation = false;
+            public Func<SocketSlashCommand, Task> callback = (SocketSlashCommand _command) => { throw new NotImplementedException(); };
+            public List<SlashCommandOptionBuilder> options = new List<SlashCommandOptionBuilder>();
+            public SlashCommandBuilder GetCommandBuilder() 
+            {
+                return new SlashCommandBuilder()
+                {
+                    Name = name,
+                    Description = description,
+                    DefaultMemberPermissions = modOnly ? GuildPermission.KickMembers : GuildPermission.ViewChannel,
+                    Options = options,
+                };
+            }
+            public Func<SocketSlashCommand, Task> GetCallback()
+            {
+                return !requiresConfirmation ? callback : (async (SocketSlashCommand _command) =>
+                {
+                    ComponentBuilder cb = new ComponentBuilder();
+                    cb.WithButton("Confirm", buttonsCreated.ToString(), ButtonStyle.Danger);
+                    Buttons.Add(buttonsCreated.ToString(), new Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>(callback, _command));
+                    buttonsCreated++;
+                    await _command.RespondAsync(ephemeral: true, components: cb.Build());
+                });
+            }
+        }
     }
     //A class to be overridden to create modules
     internal abstract class Module
@@ -318,6 +366,6 @@ namespace TableTopBot
         public Module(Program bot) { Bot = bot; }
 
         //Adds all events to the client
-        public abstract void InitilizeModule();
+        public abstract Task InitilizeModule();
     }
 }
