@@ -189,7 +189,7 @@ namespace TableTopBot
                     },
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
-                            Name = "PID",
+                            Name = "pid",
                             Type = ApplicationCommandOptionType.String,
                             Description = "your PID",
                             IsRequired = true,
@@ -259,7 +259,7 @@ namespace TableTopBot
                 await Bot.AddCommand(new Program.Command()
                 {
                     name = "remove-game",
-                    description = "removes a game from a your profile",
+                    description = "removes a game from your profile",
                     callback = (SocketSlashCommand _command) =>
                     {
                         //Removes a game from the caller's profile
@@ -279,7 +279,7 @@ namespace TableTopBot
                 await Bot.AddCommand(new Program.Command()
                 {
                     name = "add-achievement",
-                    description = "",
+                    description = "adds an achievement to your profile",
                     callback = (SocketSlashCommand _command) =>
                     {
                         //Adds an achivement to the caller's profile
