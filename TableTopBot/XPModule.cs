@@ -225,20 +225,50 @@ namespace TableTopBot
                     description = "adds a game to your profile",
                     callback = (SocketSlashCommand _command) =>
                     {
+                        Index player_index = 0;
+                        Index type_index = 1;
+                        Index rank_index = 2;
+                        Index length_index = 3;
+                        GameType game_type;
+                        
+                        switch( ((string)_command.Data.Options.ElementAt(type_index).Value).ToLower()){
+                            case "ranked":
+                                game_type = GameType.Ranked;
+                                break;
+                            case "coop":
+                                game_type = GameType.CoOp;
+                                break;
+                            case "teams":
+                                game_type = GameType.Teams;
+                                break;
+                            case "party":
+                                game_type = GameType.Party;
+                                break;
+                            default:
+                                throw new InvalidDataException(message: "Invalid Game Type.");
+                                
+                        }
+                        
+                        XpStorage.User t = xpSystem.GetUser(_command.User.Id);
+                        t.AddGame(
+                        Convert.ToUInt32(_command.Data.Options.ElementAt(player_index).Value),
+                        game_type,
+                        Convert.ToUInt32(_command.Data.Options.ElementAt(rank_index).Value), 
+                        Convert.ToUInt32(_command.Data.Options.ElementAt(length_index).Value));
                         //Adds a game to the caller's profile
                         return Task.CompletedTask;
                     },
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
-                            Name = "type",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "one of: ranked/coop/teams/party",
-                            IsRequired = true,
-                        },
-                        new SlashCommandOptionBuilder(){
                             Name = "player-count",
                             Type = ApplicationCommandOptionType.Integer,
                             Description = "the number of players/teams in the game",
+                            IsRequired = true,
+                        },
+                        new SlashCommandOptionBuilder(){
+                            Name = "type",
+                            Type = ApplicationCommandOptionType.String,
+                            Description = "one of: ranked/coop/teams/party",
                             IsRequired = true,
                         },
                         new SlashCommandOptionBuilder(){

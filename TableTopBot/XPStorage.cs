@@ -1,5 +1,6 @@
 ﻿namespace TableTopBot
 {
+    public enum GameType { Ranked = 1, CoOp = 2, Teams = 3, Party = 4 }
     internal class XpStorage
     {
         //Structs & Classes
@@ -23,7 +24,7 @@
 
             //Game type 1 = ranked, 2 = CoOp, 3 = Teams, 4 = Party
             //Rank = 1 for win 2 for loss
-            public void AddGame(uint playerCount, Game.GameType type, uint rank, uint length)
+            public void AddGame(uint playerCount, GameType type, uint rank, uint length)
             {
                 _gamesPlayed.Add(new Game(NumberGamesPlayed, type, playerCount, rank, length));
                 NumberGamesPlayed++;
@@ -52,7 +53,6 @@
         public class Game
         {
             public readonly uint Id;
-            public enum GameType { Ranked = 1, CoOp = 2, Teams = 3, Party = 4 }
             public readonly GameType Type;
             public readonly uint PlayerCount;
             public readonly uint Rank;

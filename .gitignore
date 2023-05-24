@@ -399,3 +399,5 @@ FodyWeavers.xsd
 
 # not to be shared
 /TableTopBot/PrivateVariables.cs
+Ignore.txt
+token.txt
