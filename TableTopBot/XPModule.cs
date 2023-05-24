@@ -249,8 +249,7 @@ namespace TableTopBot
                                 
                         }
                         
-                        XpStorage.User t = xpSystem.GetUser(_command.User.Id);
-                        t.AddGame(
+                        xpSystem.GetUser(_command.User.Id).AddGame(
                         Convert.ToUInt32(_command.Data.Options.ElementAt(player_index).Value),
                         game_type,
                         Convert.ToUInt32(_command.Data.Options.ElementAt(rank_index).Value), 
