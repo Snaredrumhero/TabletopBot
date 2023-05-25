@@ -5,8 +5,8 @@ namespace TableTopBot
 {
     internal class XPModule : Module
     {
-        public SocketTextChannel AnnouncementChannel() => Bot.Server().GetTextChannel(1106217661194571806);
-        public SocketTextChannel CommandChannel() => Bot.Server().GetTextChannel(1104487160226258964);
+        public SocketTextChannel AnnouncementChannel() => Bot.Server().GetTextChannel(1108244408027066468);
+        public SocketTextChannel CommandChannel() => Bot.Server().GetTextChannel(1108244408027066468);
 
         private XpStorage xpSystem = new XpStorage();
         public XPModule(Program _bot) : base(_bot) { }
@@ -183,8 +183,8 @@ namespace TableTopBot
                         for (int i = 1; i < 10; i++)
                             if (PID[i] < '0' || PID[i] > '9')
                                 throw new InvalidDataException(message: "Invalid PID.");
-
-                        xpSystem.AddNewUser(_command.User.Id, PID);
+                        
+                        xpSystem.AddNewUser(_command.User.Id, PID, _command.User.Mention);
                         return Task.CompletedTask;
                     },
                     options = new List<SlashCommandOptionBuilder>() {
@@ -291,6 +291,8 @@ namespace TableTopBot
                     description = "removes a game from your profile",
                     callback = (SocketSlashCommand _command) =>
                     {
+                        
+                        xpSystem.GetUser(_command.User.Id).RemoveGame(Convert.ToInt32(_command.Data.Options.First().Value));
                         //Removes a game from the caller's profile
                         return Task.CompletedTask;
                     },

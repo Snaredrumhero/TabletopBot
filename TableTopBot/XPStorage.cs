@@ -13,6 +13,7 @@
         public class User
         {
             public ulong DiscordId;
+            public string Username = "";
             public string Pid = "";
             private readonly List<Game> _gamesPlayed = new();
             public bool IsRaffleWinner = false; //Could be changed to an int if wanted multiple wins
@@ -125,11 +126,11 @@
             return u;
         }
 
-        public void AddNewUser(ulong discordId, string pid)
+        public void AddNewUser(ulong discordId, string pid, string userName)
         {
             if(Users.Any(user => user.DiscordId == discordId))
                 throw new InvalidDataException(message: "User already registered");
-            Users.Add(new User { DiscordId = discordId, Pid = pid });
+            Users.Add(new User { DiscordId = discordId, Pid = pid, Username = userName});
         }
         public void RemoveUser(User user) => Users.Remove(user);
 
@@ -143,7 +144,8 @@
             Random r = new(DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond);
             User winner = raffleEntries[r.Next(raffleEntries.Count)];
             winner.IsRaffleWinner = true;
-            return $"@Everyone Congrats to {winner} for winning the raffle!";
+            
+            return $"@everyone Congrats to {winner.Username} for winning the raffle!";
             // Doesn't notify officers before announcing the raffle
         }
         public string DisplayTopXUsers(int x)
