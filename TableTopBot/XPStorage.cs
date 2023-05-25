@@ -136,17 +136,28 @@
 
         public string DrawRaffle() //returns the message to send to the server
         {
-            List<User> raffleEntries = new();
-            //Return the array of copies of users for every time they passed a raffle threshold
-            foreach (User user in Users.Where(user => !user.IsRaffleWinner))
+            try{
+                List<User> raffleEntries = new();
+                //Return the array of copies of users for every time they passed a raffle threshold
+                foreach (User user in Users.Where(user => !user.IsRaffleWinner))
                 raffleEntries.AddRange(TicketThresholds.Where(points => user.Points > points).Select(_ => user));
+                
+                if(raffleEntries.Count() <= 0){
+                    throw new IndexOutOfRangeException("No valid users for raffle.");
+                }
+                Random r = new(DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond);
+                User winner = raffleEntries[r.Next(raffleEntries.Count)];
+                winner.IsRaffleWinner = true;
+
+                return $"@everyone Congrats to {winner.Username} for winning the raffle!";
+                // Doesn't notify officers before announcing the raffle
+            }catch(IndexOutOfRangeException){
+                throw;
+            }
+            catch{
+                throw new Exception("Error in processing raffle");
+            }
             
-            Random r = new(DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond);
-            User winner = raffleEntries[r.Next(raffleEntries.Count)];
-            winner.IsRaffleWinner = true;
-            
-            return $"@everyone Congrats to {winner.Username} for winning the raffle!";
-            // Doesn't notify officers before announcing the raffle
         }
         public string DisplayTopXUsers(int x)
         {
