@@ -80,10 +80,10 @@ namespace TableTopBot
                 {
                     name = "show-x-users",
                     description = "shows a leaderboard",
-                    callback = (SocketSlashCommand _command) =>
+                    callback = async (SocketSlashCommand _command) =>
                     {
+                        await AnnouncementChannel().SendMessageAsync(xpSystem.DisplayTopXUsers(Convert.ToInt32(_command.Data.Options.First().Value)));
                         //shows the entire profile of the top x users
-                        return Task.CompletedTask;
                     },
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>() {
@@ -156,8 +156,14 @@ namespace TableTopBot
                     description = "removes a player's profile",
                     callback = (SocketSlashCommand _command) =>
                     {
+                        try{
+                            xpSystem.RemoveUser(xpSystem.GetUser(((SocketUser) _command.Data.Options.First().Value).Id));
                         //removes a player from the event
-                        return Task.CompletedTask;
+                            return Task.CompletedTask;
+                        }
+                        catch{
+                            throw;
+                        }
                     },
                     modOnly = true,
                     requiresConfirmation = true,
@@ -177,15 +183,20 @@ namespace TableTopBot
                     description = "registers you for the current event",
                     callback = (SocketSlashCommand _command) =>
                     {
-                        string PID = (string)_command.Data.Options.First().Value;
-                        if (PID[0] != 'P' || PID.Length != 10)
-                            throw new InvalidDataException(message: "Invalid PID.");
-                        for (int i = 1; i < 10; i++)
-                            if (PID[i] < '0' || PID[i] > '9')
+                        try{
+                            string PID = ((string)_command.Data.Options.First().Value).ToUpper();
+                            if (PID[0] != 'P' || PID.Length != 10 || !int.TryParse(PID[1..9],out int value))
                                 throw new InvalidDataException(message: "Invalid PID.");
-                        
-                        xpSystem.AddNewUser(_command.User.Id, PID, _command.User.Mention);
-                        return Task.CompletedTask;
+                            for (int i = 1; i < 10; i++)
+                                if (PID[i] < '0' || PID[i] > '9')
+                                    throw new InvalidDataException(message: "Invalid PID.");
+                            
+                            xpSystem.AddNewUser(_command.User, PID);
+                            return Task.CompletedTask;
+                        }
+                        catch{
+                            throw;
+                        }
                     },
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
@@ -313,8 +324,14 @@ namespace TableTopBot
                     description = "adds an achievement to your profile",
                     callback = (SocketSlashCommand _command) =>
                     {
+                        try{
+                           xpSystem.GetUser(_command.User.Id).ClaimAchievement((string)_command.Data.Options.First().Value); 
+                            return Task.CompletedTask;
+                        }
+                        catch{
+                            throw;
+                        }
                         //Adds an achivement to the caller's profile
-                        return Task.CompletedTask;
                     },
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
@@ -332,6 +349,7 @@ namespace TableTopBot
                     description = "removes an achievement from your profile",
                     callback = (SocketSlashCommand _command) =>
                     {
+                        
                         //Removes an achivement from the caller's profile
                         return Task.CompletedTask;
                     },

@@ -1,4 +1,6 @@
-﻿namespace TableTopBot
+﻿//using System.Text.Json;
+using Discord.WebSocket;
+namespace TableTopBot
 {
     public enum GameType { Ranked = 1, CoOp = 2, Teams = 3, Party = 4 }
     internal class XpStorage
@@ -12,8 +14,7 @@
         }
         public class User
         {
-            public ulong DiscordId;
-            public string Username = "";
+            public SocketUser DiscordUser = default!;
             public string Pid = "";
             private readonly List<Game> _gamesPlayed = new();
             public bool IsRaffleWinner = false; //Could be changed to an int if wanted multiple wins
@@ -37,7 +38,7 @@
             { return _gamesPlayed.Select(game => game.Xp).Sum() + Achievements.Select(achievement => achievement.XpValue).Sum(); }
 
             public override string ToString()
-            { return $"{DiscordId}\nPID: {Pid}\nPoints: {AddPointValues()}"; }
+            { return $"{DiscordUser.Id}\nPID: {Pid}\nPoints: {AddPointValues()}"; }
 
             public void ClaimAchievement(string achievementName)
             {
@@ -120,20 +121,33 @@
 
         public User GetUser(ulong discordId)
         {
-            User? u = Users.FirstOrDefault(user => user.DiscordId == discordId);
+            User? u = Users.FirstOrDefault(user => user.DiscordUser.Id == discordId);
             if (u == null)
                 throw new NullReferenceException(message: "User not found in system.");
             return u;
         }
 
-        public void AddNewUser(ulong discordId, string pid, string userName)
+        public void AddNewUser(SocketUser addedUser, string pid)
         {
-            if(Users.Any(user => user.DiscordId == discordId))
-                throw new InvalidDataException(message: "User already registered");
-            Users.Add(new User { DiscordId = discordId, Pid = pid, Username = userName});
+            try{
+                if(Users.Any(user => user.DiscordUser.Id == addedUser.Id))
+                    throw new InvalidDataException(message: "User already registered");
+                Users.Add(new User {DiscordUser = addedUser, Pid = pid});
+            }
+            catch{
+                throw;
+            }
         }
         public void RemoveUser(User user) => Users.Remove(user);
-
+        /*
+        private void LoadAchievements(User user){
+            string jsonString = File.ReadAllText("Achievement.json");
+            
+            var tmp = JsonSerializer.Deserialize<List<AchievementData>>(jsonString)!;
+            
+            
+        }
+        */
         public string DrawRaffle() //returns the message to send to the server
         {
             try{
@@ -149,7 +163,7 @@
                 User winner = raffleEntries[r.Next(raffleEntries.Count)];
                 winner.IsRaffleWinner = true;
 
-                return $"@everyone Congrats to {winner.Username} for winning the raffle!";
+                return $"@everyone Congrats to {winner.DiscordUser.Mention} for winning the raffle!";
                 // Doesn't notify officers before announcing the raffle
             }catch(IndexOutOfRangeException){
                 throw;
@@ -167,7 +181,7 @@
 
             List<string> lines = new();
             for (int i = 0; i < x; i++)
-                lines.Add($"{i}: {Users[i].Points} - {Users[i].DiscordId}");
+                lines.Add($"{i+1}: {Users[i].DiscordUser.ToString()} - {Users[i].Points} Points");
             return string.Join('\n', lines);
         }
         public void Clear() => Users.Clear();
