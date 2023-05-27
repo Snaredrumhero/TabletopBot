@@ -50,8 +50,14 @@ namespace TableTopBot
                     name = "draw-raffle",
                     description = "draws a raffle ticket",
                     callback = async (SocketSlashCommand _command) =>
-                    {
-                        await AnnouncementChannel().SendMessageAsync(xpSystem.DrawRaffle());
+                    {   try{
+                            await AnnouncementChannel().SendMessageAsync(xpSystem.DrawRaffle());
+                        }
+                        catch
+                        { 
+                            throw;
+                        }
+                    
                     },
                     modOnly = true,
                     requiresConfirmation = true,
@@ -232,43 +238,61 @@ namespace TableTopBot
                 //
                 await Bot.AddCommand(new Program.Command()
                 {
+                    //Adds a game to the caller's profile
                     name = "add-game",
                     description = "adds a game to your profile",
-                    callback = (SocketSlashCommand _command) =>
+                    callback = async (SocketSlashCommand _command) =>
                     {
-                        Index player_index = 0;
-                        Index type_index = 1;
-                        Index rank_index = 2;
-                        Index length_index = 3;
-                        GameType game_type;
-                        
-                        switch( ((string)_command.Data.Options.ElementAt(type_index).Value).ToLower()){
-                            case "ranked":
-                                game_type = GameType.Ranked;
-                                break;
-                            case "coop":
-                                game_type = GameType.CoOp;
-                                break;
-                            case "teams":
-                                game_type = GameType.Teams;
-                                break;
-                            case "party":
-                                game_type = GameType.Party;
-                                break;
-                            default:
-                                throw new InvalidDataException(message: "Invalid Game Type.");
+                        try
+                        {
+                            Index game_index = 0;
+                            Index player_index = 1;
+                            Index type_index = 2;
+                            Index rank_index = 3;
+                            Index length_index = 4;
+                            GameType game_type;
+                            
+                            switch( ((string)_command.Data.Options.ElementAt(type_index).Value).ToLower()){
+                                case "ranked":
+                                    game_type = GameType.Ranked;
+                                    break;
+                                case "coop":
+                                    game_type = GameType.CoOp;
+                                    break;
+                                case "teams":
+                                    game_type = GameType.Teams;
+                                    break;
+                                case "party":
+                                    game_type = GameType.Party;
+                                    break;
+                                default:
+                                    throw new InvalidDataException(message: "Invalid Game Type.");
+                                    
+                            }
+                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
+                            user.AddGame(
+                                _command.Data.Options.ElementAt(game_index).Value.ToString()!,
+                                Convert.ToUInt32(_command.Data.Options.ElementAt(player_index).Value),
+                                game_type,
+                                Convert.ToUInt32(_command.Data.Options.ElementAt(rank_index).Value), 
+                                Convert.ToUInt32(_command.Data.Options.ElementAt(length_index).Value));
                                 
+                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Games", 
+                                user.ShowGames(Convert.ToInt32(user.NumberGamesPlayed-1)).ToString()).Build(), ephemeral: true);
+                            //return Task.CompletedTask;
                         }
-                        
-                        xpSystem.GetUser(_command.User.Id).AddGame(
-                        Convert.ToUInt32(_command.Data.Options.ElementAt(player_index).Value),
-                        game_type,
-                        Convert.ToUInt32(_command.Data.Options.ElementAt(rank_index).Value), 
-                        Convert.ToUInt32(_command.Data.Options.ElementAt(length_index).Value));
-                        //Adds a game to the caller's profile
-                        return Task.CompletedTask;
+                        catch
+                        {
+                            throw;
+                        }
                     },
                     options = new List<SlashCommandOptionBuilder>() {
+                        new SlashCommandOptionBuilder(){
+                            Name = "name",
+                            Type = ApplicationCommandOptionType.String,
+                            Description = "the name of the game played",
+                            IsRequired = true,
+                        },
                         new SlashCommandOptionBuilder(){
                             Name = "player-count",
                             Type = ApplicationCommandOptionType.Integer,

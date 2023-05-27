@@ -26,9 +26,9 @@ namespace TableTopBot
 
             //Game type 1 = ranked, 2 = CoOp, 3 = Teams, 4 = Party
             //Rank = 1 for win 2 for loss
-            public void AddGame(uint playerCount, GameType type, uint rank, uint length)
+            public void AddGame(string name, uint playerCount, GameType type, uint rank, uint length)
             {
-                _gamesPlayed.Add(new Game(NumberGamesPlayed, type, playerCount, rank, length));
+                _gamesPlayed.Add(new Game(name, NumberGamesPlayed, type, playerCount, rank, length));
                 NumberGamesPlayed++;
             }
             public void RemoveGame(int id) => _gamesPlayed.RemoveAll(game => game.Id == id);
@@ -51,9 +51,23 @@ namespace TableTopBot
                 Achievement achievement = _allAchievements.FirstOrDefault(achievement => achievement.Name == achievementName) ?? throw new ArgumentException("Achievement Not Found");
                 achievement.IsClaimed = false;
             }
+            public string ShowGames(int list_games = Int32.MinValue){
+                string gamelist = "";
+                if(list_games == Int32.MinValue){   
+                    for(int i = 0; i < NumberGamesPlayed; ++i){
+                            gamelist += (_gamesPlayed[i].GameAttributes() + "\n\n");
+                    }
+                }
+                else{
+                    gamelist += _gamesPlayed[list_games].GameAttributes();
+                }
+                gamelist += "\n\nTotal Points: " + Points.ToString();
+                return gamelist; 
+            }
         }
         public class Game
         {
+            public readonly string Name;
             public readonly uint Id;
             public readonly GameType Type;
             public readonly uint PlayerCount;
@@ -62,14 +76,17 @@ namespace TableTopBot
             public int Xp => ComputeXp();
 
             private const double PointsScale = 1.5;//scale of points awarded (makes numbers bigger bc big numbers are fun)
-            private static readonly double[] RankedPositions = { 24d / 24d, 22d / 24d, 20d / 24d, 18d / 24d, 17d / 24d, 16d / 24d };
+            private const double XtraScale = PointsScale/0.5;
+            private const int RankedPositions = 5;
+            //private static readonly double[] RankedPositions = { 24d / 24d, 22d / 24d, 20d / 24d, 18d / 24d, 17d / 24d, 16d / 24d };
 
-            public Game(uint id, GameType type, uint playerCount, uint rank, uint gameLengthInMinutes)
+            public Game(string name, uint id, GameType type, uint playerCount, uint rank, uint gameLengthInMinutes)
             {
                 if (rank == 0)
                     throw new ArgumentException(message: "rank can not be 0", paramName: nameof(rank));
                 if (playerCount < rank)
                     throw new ArgumentException(paramName: nameof(rank), message: "rank cannot be greater than playerCount");
+                Name = name;
                 Id = id;
                 Type = type;
                 PlayerCount = playerCount;
@@ -77,21 +94,40 @@ namespace TableTopBot
                 GameLengthInMinutes = gameLengthInMinutes;
             }
 
+            public string GameAttributes(){
+                List<string> gameAttributes = new List<string>();
+                gameAttributes.Add("Name: " + Name.ToString());
+                gameAttributes.Add("ID: " + Id.ToString());
+                gameAttributes.Add("Game Type: " + Type.ToString());
+                gameAttributes.Add("Ranking: " +  Rank.ToString());
+                gameAttributes.Add("Game Length: " + GameLengthInMinutes.ToString() + " minutes");
+                gameAttributes.Add("Points: " + Xp.ToString());
+                
+                return String.Join("\n",gameAttributes);
+            }
             private int ComputeXp()
             {
-                double points = PointsScale * GameLengthInMinutes * 3 / 2;
-                if (Type != GameType.Ranked)
-                    return (int)(points * (Rank == 1 ? RankedPositions[2] : RankedPositions[^1]));
-                if (PlayerCount < RankedPositions.Length)
-                    //1st gets full (24/24)
-                    //if 3 people 2 gets 20
-                    //if 5 people 2: 22 3:20 4:18
-                    //last gets 2/3 (16/24)
-                    //CoOp Teams Party W: 3rd place L: 2/3 last
-                    return (int)(points * (8d * ((double)PlayerCount - Rank) / (PlayerCount - 1d + 16d) / 24d));
-                if (Rank > RankedPositions.Length)
-                    return (int)(points * RankedPositions[^1]);
-                return (int)(points * RankedPositions[Rank - 1]);
+                double points = PointsScale * GameLengthInMinutes;
+                double xtraPoints = XtraScale * GameLengthInMinutes;
+                if (Type == GameType.Ranked)
+                {
+                    if (PlayerCount >= RankedPositions)
+                    {
+                        if(Rank <= RankedPositions)
+                            return (int)(points + (xtraPoints)/Rank);
+                        else
+                            return (int) points;
+                    }
+                    else
+                    {
+                        xtraPoints = (double)((XtraScale * PlayerCount) / (double)RankedPositions) * GameLengthInMinutes;
+                        return (int)(points + xtraPoints/( ((Rank-1) * RankedPositions / (PlayerCount)) + 1));
+                    }
+                }
+                else
+                {
+                    return (int)(points + (Rank == 1 ? (xtraPoints/2) : 0));
+                }
             }
         }
         public class Achievement
@@ -185,5 +221,8 @@ namespace TableTopBot
             return string.Join('\n', lines);
         }
         public void Clear() => Users.Clear();
+        
     }
+    
+    
 }
