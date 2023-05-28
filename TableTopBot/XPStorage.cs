@@ -1,24 +1,18 @@
-﻿//using System.Text.Json;
+﻿using System.Text.Json;
 using Discord.WebSocket;
 namespace TableTopBot
 {
     public enum GameType { Ranked = 1, CoOp = 2, Teams = 3, Party = 4 }
     internal class XpStorage
     {
-        //Structs & Classes
-        public struct AchievementData
-        {
-            public string Name;
-            public string Description;
-            public int XpValue;
-        }
         public class User
         {
             public SocketUser DiscordUser = default!;
             public string Pid = "";
             private readonly List<Game> _gamesPlayed = new();
             public bool IsRaffleWinner = false; //Could be changed to an int if wanted multiple wins
-            private readonly List<Achievement> _allAchievements = DefaultAchievements.Select(data => new Achievement(data)).ToList();
+            //private readonly List<Achievement> _allAchievements = DefaultAchievements.Select(data => new Achievement(data)).ToList();
+            private readonly List<Achievement> _allAchievements = DefaultAchievements;
             public List<Achievement> Achievements => _allAchievements.Where(achievement => achievement.IsClaimed).ToList();
             public uint NumberGamesPlayed; //only used for tracking game ids
             public static bool operator >(User a, User b) => a.AddPointValues() > b.AddPointValues();
@@ -61,8 +55,21 @@ namespace TableTopBot
                 else{
                     gamelist += _gamesPlayed[list_games].GameAttributes();
                 }
-                gamelist += "\n\nTotal Points: " + Points.ToString();
                 return gamelist; 
+            }
+            public string ShowAchievements(bool showAll = false){
+                string achievementlist = "";
+                if(showAll){   
+                    for(int i = 0; i < DefaultAchievements.Count; ++i){
+                            achievementlist += (DefaultAchievements[i].AchievementAttributes() + "\n\n");
+                    }
+                }
+                else{
+                   for(int i = 0; i < Achievements.Count; ++i){
+                            achievementlist += (Achievements[i].AchievementAttributes() + "\n\n");
+                    }
+                } 
+                return achievementlist; 
             }
         }
         public class Game
@@ -132,14 +139,27 @@ namespace TableTopBot
         }
         public class Achievement
         {
-            public string Name => _data.Name;
-            public string Description => _data.Description;
-            public int XpValue => _data.XpValue;
-            public bool IsClaimed;
-            private readonly AchievementData _data;
 
-            public Achievement(AchievementData data)
-            { _data = data; }
+            public string? Name{get;set;}
+            public string? Description{get;set;}
+            public int XpValue{get;set;}
+            public bool IsClaimed = false;
+            
+            public string AchievementAttributes(){
+                try{
+                    
+                    List<string> achievementAttributes = new List<string>();
+                    achievementAttributes.Add("Name: " + Name!);
+                    achievementAttributes.Add("Description: " + Description!);
+                    achievementAttributes.Add("Points: " + XpValue.ToString());
+                    achievementAttributes.Add("Claimed: " + IsClaimed.ToString());
+                    
+                    return String.Join("\n", achievementAttributes);
+                }
+                catch{
+                    throw;
+                }
+            }
         }
 
         //Psudo Const
@@ -147,12 +167,18 @@ namespace TableTopBot
         {
             0, //need to add more ticket values
         };
-        private static readonly List<AchievementData> DefaultAchievements = new()
-        {
-            new AchievementData {Name = "name", Description = "description", XpValue = 0},
-            //We can add negative achievements
-        };
+        
+        private static readonly List<Achievement> DefaultAchievements = JsonSerializer.Deserialize<List<Achievement>>(File.ReadAllText("Achievement.json"))!;
 
+        public string AchievementList(){
+            string achievementList = "";
+            for(int i = 0; i < DefaultAchievements.Count(); ++i){
+                achievementList += DefaultAchievements[i].Name + "\n";
+            }
+            return achievementList;
+            
+        }
+        
         private readonly List<User> Users = new();
 
         public User GetUser(ulong discordId)
@@ -167,23 +193,16 @@ namespace TableTopBot
         {
             try{
                 if(Users.Any(user => user.DiscordUser.Id == addedUser.Id))
-                    throw new InvalidDataException(message: "User already registered");
+                    throw new InvalidDataException(message: "User is already registered.");
                 Users.Add(new User {DiscordUser = addedUser, Pid = pid});
             }
             catch{
                 throw;
             }
+            
         }
         public void RemoveUser(User user) => Users.Remove(user);
-        /*
-        private void LoadAchievements(User user){
-            string jsonString = File.ReadAllText("Achievement.json");
-            
-            var tmp = JsonSerializer.Deserialize<List<AchievementData>>(jsonString)!;
-            
-            
-        }
-        */
+        
         public string DrawRaffle() //returns the message to send to the server
         {
             try{
