@@ -155,6 +155,8 @@ namespace TableTopBot
                     description = "removes an achievement from a player's profile",
                     callback = async (SocketSlashCommand _command) =>
                     {
+                        xpSystem.GetUser(((SocketUser) _command.Data.Options.First().Value).Id)
+                            .UnclaimAchievement((string) (_command.Data.Options.ElementAt(1).Value));
                         //removes an achievement from a player
                         await Task.CompletedTask;
                     },
