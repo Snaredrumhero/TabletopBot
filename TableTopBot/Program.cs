@@ -11,8 +11,8 @@ namespace TableTopBot
         //The bot's client
         private DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
         //Channels
-        public SocketGuild Server() => Client.GetGuild(1108244378956353626);
-        public SocketTextChannel LogChannel() => Server().GetTextChannel(1108244408027066468);
+        public SocketGuild Server() => Client.GetGuild(1047337930965909646);
+        public SocketTextChannel LogChannel() => Server().GetTextChannel(1106257696388296754);
         
         public static Task Main(string[] args) => new Program().MainAsync();
 
@@ -54,7 +54,7 @@ namespace TableTopBot
             await new XPModule(this).InitilizeModule();
 
             //run bot
-            await Client.LoginAsync(TokenType.Bot, "MTEwODE5MjE4NDA2NDI5MDg5Ng.G3_WMH.m3UswqFEGth1EhKXsp5qyRGFaCe28rQxgEX1qg");
+            await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
             await Client.StartAsync();
             await AwaitConsoleCommands();
             await Server().DeleteApplicationCommandsAsync();
@@ -301,7 +301,7 @@ namespace TableTopBot
 
         public async Task AddGuildCommand(SlashCommandBuilder builder)
         {
-            try { await Client.GetGuild(1108244378956353626).CreateApplicationCommandAsync(builder.Build()); }
+            try { await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(builder.Build()); }
             catch (Exception ex) { Debug.WriteLine(ex); }
         }
         private Task AwaitConsoleCommands()
@@ -320,7 +320,7 @@ namespace TableTopBot
         private static Dictionary<string, Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>> Buttons = new Dictionary<string, Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>>();
         public async Task AddCommand(Command _command)
         {
-            try  { Callbacks.Add((await Client.GetGuild(1108244378956353626).CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.GetCallback()); }
+            try  { Callbacks.Add((await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.GetCallback()); }
             catch (Exception ex) { Debug.WriteLine(ex); }
         }
         public class Command
