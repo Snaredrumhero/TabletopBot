@@ -5,16 +5,16 @@ namespace TableTopBot
     public enum GameType { Ranked = 1, CoOp = 2, Teams = 3, Party = 4 }
     internal class XpStorage
     {
+        public string EventName = "";
         public class User
         {
             public SocketUser DiscordUser = default!;
             public string Pid = "";
             private readonly List<Game> _gamesPlayed = new();
             public bool IsRaffleWinner = false; //Could be changed to an int if wanted multiple wins
-            //private readonly List<Achievement> _allAchievements = DefaultAchievements.Select(data => new Achievement(data)).ToList();
-            private readonly List<Achievement> _allAchievements = DefaultAchievements;
+            private readonly List<Achievement> _allAchievements = JsonSerializer.Deserialize<List<Achievement>>(File.ReadAllText("Achievement.json"))!;
             public List<Achievement> Achievements => _allAchievements.Where(achievement => achievement.IsClaimed).ToList();
-            public uint NumberGamesPlayed; //only used for tracking game ids
+            public uint NumberGamesPlayed => (uint) _gamesPlayed.Count; //only used for tracking game ids
             public static bool operator >(User a, User b) => a.AddPointValues() > b.AddPointValues();
             public static bool operator <(User a, User b) => a.AddPointValues() < b.AddPointValues();
 
@@ -23,7 +23,6 @@ namespace TableTopBot
             public void AddGame(string name, uint playerCount, GameType type, uint rank, uint length)
             {
                 _gamesPlayed.Add(new Game(name, NumberGamesPlayed, type, playerCount, rank, length));
-                NumberGamesPlayed++;
             }
             public void RemoveGame(int id) => _gamesPlayed.RemoveAll(game => game.Id == id);
 
@@ -48,7 +47,7 @@ namespace TableTopBot
             public string ShowGames(int list_games = Int32.MinValue){
                 string gamelist = "";
                 if(list_games == Int32.MinValue){   
-                    for(int i = 0; i < NumberGamesPlayed; ++i){
+                    for(int i = 0; i < _gamesPlayed.Count(); ++i){
                             gamelist += (_gamesPlayed[i].GameAttributes() + "\n\n");
                     }
                 }
@@ -57,18 +56,26 @@ namespace TableTopBot
                 }
                 return gamelist; 
             }
-            public string ShowAchievements(bool showAll = false){
+            public string ShowAchievements(bool showAll = false, string id = default(String)!){
                 string achievementlist = "";
-                if(showAll){   
-                    for(int i = 0; i < DefaultAchievements.Count; ++i){
-                            achievementlist += (DefaultAchievements[i].AchievementAttributes() + "\n\n");
+                if(showAll)
+                {   
+                    for(int i = 0; i < _allAchievements.Count; ++i)
+                    {
+                            achievementlist += (_allAchievements[i].AchievementAttributes() + "\n\n");
                     }
                 }
-                else{
-                   for(int i = 0; i < Achievements.Count; ++i){
+                else if (id == default(String))
+                {
+                   for(int i = 0; i < Achievements.Count; ++i)
+                    {
                             achievementlist += (Achievements[i].AchievementAttributes() + "\n\n");
                     }
                 } 
+                else
+                {
+                    achievementlist += Achievements.FirstOrDefault(achievement => achievement.Name == id)!.AchievementAttributes() ?? throw new ArgumentException("Achievement Not Found");
+                }
                 return achievementlist; 
             }
         }
@@ -167,17 +174,6 @@ namespace TableTopBot
         {
             0, //need to add more ticket values
         };
-        
-        private static readonly List<Achievement> DefaultAchievements = JsonSerializer.Deserialize<List<Achievement>>(File.ReadAllText("Achievement.json"))!;
-
-        public string AchievementList(){
-            string achievementList = "";
-            for(int i = 0; i < DefaultAchievements.Count(); ++i){
-                achievementList += DefaultAchievements[i].Name + "\n";
-            }
-            return achievementList;
-            
-        }
         
         private readonly List<User> Users = new();
 

@@ -5,8 +5,8 @@ namespace TableTopBot
 {
     internal class XPModule : Module
     {
-        public SocketTextChannel AnnouncementChannel() => Bot.Server().GetTextChannel(1108244408027066468);
-        public SocketTextChannel CommandChannel() => Bot.Server().GetTextChannel(1108244408027066468);
+        public SocketTextChannel AnnouncementChannel() => Bot.Server().GetTextChannel(1106217661194571806);
+        public SocketTextChannel CommandChannel() => Bot.Server().GetTextChannel(1104487160226258964);
 
         private XpStorage xpSystem = new XpStorage();
         public XPModule(Program _bot) : base(_bot) { }
@@ -23,13 +23,24 @@ namespace TableTopBot
                     callback = async (SocketSlashCommand _command) =>
                     {
                         await CommandChannel().AddPermissionOverwriteAsync(Bot.Server().EveryoneRole, OverwritePermissions.DenyAll(CommandChannel()).Modify(viewChannel: PermValue.Allow, useApplicationCommands: PermValue.Allow, sendMessages: PermValue.Allow));
+                        
                         xpSystem.Clear();
-                        //return Task.CompletedTask;
-                        // await _command.RespondAsync(embed: new EmbedBuilder().AddField("Starting", 
-                        // "Game").Build(), ephemeral: true);
+                        xpSystem.EventName = (string) _command.Data.Options.First().Value;
+                         
+                        await AnnouncementChannel().SendMessageAsync(embed: new EmbedBuilder().AddField("The Event has Started!", 
+                            xpSystem.EventName).Build());
+
                     },
                     modOnly = true,
                     requiresConfirmation = true,
+                    options = new List<SlashCommandOptionBuilder>() {
+                        new SlashCommandOptionBuilder(){
+                            Name = "event-name",
+                            Type = ApplicationCommandOptionType.String,
+                            Description = "name of the event",
+                            IsRequired = true,
+                        },
+                    }
                 });
                 //
                 await Bot.AddCommand(new Program.Command()
@@ -41,7 +52,10 @@ namespace TableTopBot
                         //displays the top 3 users to the all-day announcements channel for prizes
                         //could display overall statistics for the all-day as well
                         await CommandChannel().AddPermissionOverwriteAsync(Bot.Server().EveryoneRole, OverwritePermissions.DenyAll(CommandChannel()));
-                        //return Task.CompletedTask;
+                        
+                        await AnnouncementChannel().SendMessageAsync(xpSystem.DisplayTopXUsers(3));
+                        await AnnouncementChannel().SendMessageAsync(embed: new EmbedBuilder().AddField("Thank you for participating in the event.", 
+                            xpSystem.EventName).Build());
                     },
                     modOnly = true,
                     requiresConfirmation = true,
@@ -53,7 +67,7 @@ namespace TableTopBot
                     description = "draws a raffle ticket",
                     callback = async (SocketSlashCommand _command) =>
                     {   try{
-                            await AnnouncementChannel().SendMessageAsync(xpSystem.DrawRaffle());
+                            await AnnouncementChannel().SendMessageAsync(embed: new EmbedBuilder().AddField("Raffle Winner", xpSystem.DrawRaffle()).Build());
                         }
                         catch
                         { 
@@ -92,7 +106,8 @@ namespace TableTopBot
                     {
                         try
                         {
-                            await AnnouncementChannel().SendMessageAsync(xpSystem.DisplayTopXUsers(Convert.ToInt32(_command.Data.Options.First().Value)));
+                            await AnnouncementChannel().SendMessageAsync( embed: (new EmbedBuilder().AddField("Top " + (string) _command.Data.Options.First().Value + " Users",
+                                xpSystem.DisplayTopXUsers(Convert.ToInt32(_command.Data.Options.First().Value))).Build()));
                         //shows the entire profile of the top x users
                         }
                         catch
@@ -120,11 +135,15 @@ namespace TableTopBot
                         try
                         {    
                         //removes a game from a player
+                            string name = xpSystem.GetUser(((SocketGuildUser) _command.Data.Options.First().Value).Id).ShowGames(Convert.ToInt32(_command.Data.Options.ElementAt(1).Value));
                             
-                            xpSystem.GetUser(((SocketUser) _command.Data.Options.First().Value).Id)
-                            .RemoveGame(Convert.ToInt32(_command.Data.Options.ElementAt(1).Value));
-                            await Task.CompletedTask;
-                            //return Task.CompletedTask;
+                            xpSystem.GetUser(((SocketGuildUser) _command.Data.Options.First().Value).Id)
+                                .RemoveGame(Convert.ToInt32(_command.Data.Options.ElementAt(1).Value));
+                                
+                            await _command.FollowupAsync(embed: (new EmbedBuilder().AddField("Game Removed", 
+                                xpSystem.GetUser(((SocketGuildUser)_command.Data.Options.First().Value).Id).DiscordUser.ToString() + "\n" + 
+                                name)).Build(), ephemeral: true);
+                                
                         }
                         catch
                         {
@@ -155,10 +174,13 @@ namespace TableTopBot
                     description = "removes an achievement from a player's profile",
                     callback = async (SocketSlashCommand _command) =>
                     {
-                        xpSystem.GetUser(((SocketUser) _command.Data.Options.First().Value).Id)
+                        xpSystem.GetUser(((SocketGuildUser) _command.Data.Options.First().Value).Id)
                             .UnclaimAchievement((string) (_command.Data.Options.ElementAt(1).Value));
                         //removes an achievement from a player
-                        await Task.CompletedTask;
+                         
+                        await _command.FollowupAsync(embed: (new EmbedBuilder().AddField("Achievement Removed", 
+                            xpSystem.GetUser(((SocketGuildUser)_command.Data.Options.First().Value).Id).DiscordUser.ToString() + "\n" + 
+                            (string) _command.Data.Options.ElementAt(1).Value)).Build(), ephemeral: true);
                     },
                     modOnly = true,
                     requiresConfirmation = true,
@@ -185,11 +207,16 @@ namespace TableTopBot
                     callback = async (SocketSlashCommand _command) =>
                     {
                         try{
-                            xpSystem.RemoveUser(xpSystem.GetUser(((SocketUser) _command.Data.Options.First().Value).Id));
+                            string user = xpSystem.GetUser(((SocketGuildUser) _command.Data.Options.First().Value).Id).DiscordUser.Username;
+                            
+                            xpSystem.RemoveUser(xpSystem.GetUser(((SocketGuildUser) _command.Data.Options.First().Value).Id));
                         //removes a player from the event
-                            await Task.CompletedTask;
+                            await _command.FollowupAsync(embed: (new EmbedBuilder().AddField("User Removed", 
+                                user)).Build(), ephemeral: true);
                         }
                         catch{
+                            await _command.FollowupAsync(embed: (new EmbedBuilder().AddField("User Not Found", 
+                                ((SocketGuildUser)_command.Data.Options.First().Value).Username)).Build(), ephemeral: true);
                             throw;
                         }
                     },
@@ -222,7 +249,8 @@ namespace TableTopBot
                                     throw new InvalidDataException(message: "Invalid PID.");
                             
                             xpSystem.AddNewUser(_command.User, PID);
-                            await Task.CompletedTask;
+                            
+                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Added to Event\nYour Data", xpSystem.GetUser(_command.User.Id).ToString()).Build(), ephemeral: true);
                         }
                         catch{
                             throw;
@@ -246,8 +274,9 @@ namespace TableTopBot
                     {
                         try
                         {
+                            String name = xpSystem.GetUser(_command.User.Id).DiscordUser.Username;
                             xpSystem.RemoveUser(xpSystem.GetUser(_command.User.Id));
-                            await Task.CompletedTask;
+                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Successfully left event", name).Build(), ephemeral: true);
                         }
                         catch
                         {
@@ -315,9 +344,8 @@ namespace TableTopBot
                                 Convert.ToUInt32(_command.Data.Options.ElementAt(rank_index).Value), 
                                 Convert.ToUInt32(_command.Data.Options.ElementAt(length_index).Value));
                                 
-                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Games", 
+                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Added game to profile", 
                                 user.ShowGames(Convert.ToInt32(user.NumberGamesPlayed-1))).Build(), ephemeral: true);
-                            //return Task.CompletedTask;
                         }
                         catch
                         {
@@ -342,12 +370,20 @@ namespace TableTopBot
                             Type = ApplicationCommandOptionType.String,
                             Description = "one of: ranked/coop/teams/party",
                             IsRequired = true,
-                        },
+                            
+                            
+                        }
+                            .AddChoice("Ranked", "ranked")
+                            .AddChoice("Co-op", "coop")
+                            .AddChoice("Teams", "teams")
+                            .AddChoice("Party", "party")
+                        ,
                         new SlashCommandOptionBuilder(){
                             Name = "rank",
                             Type = ApplicationCommandOptionType.Integer,
                             Description = "where you/your team ranked",
                             IsRequired = true,
+                            
                         },
                         new SlashCommandOptionBuilder(){
                             Name = "time",
@@ -366,9 +402,12 @@ namespace TableTopBot
                     {
                         try
                         {
+                            string name = xpSystem.GetUser(_command.User.Id).ShowGames(Convert.ToInt32(_command.Data.Options.First().Value));
                             xpSystem.GetUser(_command.User.Id).RemoveGame(Convert.ToInt32(_command.Data.Options.First().Value));
                             //Removes a game from the caller's profile
-                            await Task.CompletedTask;
+                            await _command.FollowupAsync(embed: new EmbedBuilder().AddField("Removed Game From List", 
+                                name).Build(), ephemeral: true);
+                            //return Task.CompletedTask;
                         }
                         catch
                         {
@@ -388,6 +427,26 @@ namespace TableTopBot
                 //
                 await Bot.AddCommand(new Program.Command()
                 {
+                    name = "show-games",
+                    description = "shows your completed games",
+                    callback = async (SocketSlashCommand _command) =>
+                    {
+                        try
+                        {
+                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Games", 
+                                xpSystem.GetUser(_command.User.Id).ShowGames()).Build(), ephemeral: true);
+                        
+                        }
+                        catch
+                        {
+                            throw;
+                        }
+                    },
+                    
+                });
+                
+                await Bot.AddCommand(new Program.Command()
+                {
                     name = "add-achievement",
                     description = "adds an achievement to your profile",
                     callback = async (SocketSlashCommand _command) =>
@@ -395,7 +454,8 @@ namespace TableTopBot
                         try
                         {
                            xpSystem.GetUser(_command.User.Id).ClaimAchievement((string) _command.Data.Options.First().Value); 
-                            await Task.CompletedTask;
+                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Added achievement to profile", 
+                                xpSystem.GetUser(_command.User.Id).ShowAchievements(id: (string) _command.Data.Options.First().Value)).Build(), ephemeral: true);
                         }
                         catch{
                             throw;
@@ -420,9 +480,11 @@ namespace TableTopBot
                     {
                         try
                         {
+                            
                             xpSystem.GetUser(_command.User.Id).UnclaimAchievement((string) _command.Data.Options.First().Value);
                             //Removes an achivement from the caller's profile
-                            await Task.CompletedTask;
+                            await _command.FollowupAsync(embed: new EmbedBuilder().AddField("Achievement Removed", 
+                            _command.Data.Options.First().Value).Build(), ephemeral: true);
                         
                         }
                         catch
@@ -444,33 +506,14 @@ namespace TableTopBot
                 
                 await Bot.AddCommand(new Program.Command()
                 {
-                    name = "show-games",
-                    description = "shows your completed games",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        try
-                        {
-                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Games", 
-                                xpSystem.GetUser(_command.User.Id).ShowGames()).Build(), ephemeral: true);
-                        
-                        }
-                        catch
-                        {
-                            throw;
-                        }
-                    },
-                    
-                });
-                await Bot.AddCommand(new Program.Command()
-                {
                     name = "show-achievements",
                     description = "shows achievements you have completed or all available achievements",
                     callback = async (SocketSlashCommand _command) =>
                     {
                         try
-                        {
-                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Games", 
-                            xpSystem.GetUser(_command.User.Id).ShowAchievements((Boolean) _command.Data.Options.First().Value)).Build(), ephemeral: true);
+                        {   
+                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Achievements", 
+                                xpSystem.GetUser(_command.User.Id).ShowAchievements(showAll: (Boolean) _command.Data.Options.First().Value)).Build(), ephemeral: true);
                         }
                         catch
                         {
@@ -482,8 +525,11 @@ namespace TableTopBot
                             Name = "show-all",
                             Type = ApplicationCommandOptionType.Boolean,
                             Description = "True: shows all achievements | False: shows your completed achievements",
+                            IsRequired = true,
                         },
                     },
+                    
+                    
                 });
                 
                 Console.WriteLine("Commands Initalized");
