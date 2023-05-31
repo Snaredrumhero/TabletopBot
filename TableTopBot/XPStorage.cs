@@ -12,9 +12,10 @@ namespace TableTopBot
             public string Pid = "";
             private readonly List<Game> _gamesPlayed = new();
             public bool IsRaffleWinner = false; //Could be changed to an int if wanted multiple wins
-            private readonly List<Achievement> _allAchievements = JsonSerializer.Deserialize<List<Achievement>>(File.ReadAllText("Achievement.json"))!;
+            private readonly List<Achievement> _allAchievements = DefaultAchievements.Select(achievement => achievement).ToList();
+
             public List<Achievement> Achievements => _allAchievements.Where(achievement => achievement.IsClaimed).ToList();
-            public uint NumberGamesPlayed => (uint) _gamesPlayed.Count; //only used for tracking game ids
+            public uint NumberGamesPlayed = 0; //only used for tracking game ids
             public static bool operator >(User a, User b) => a.AddPointValues() > b.AddPointValues();
             public static bool operator <(User a, User b) => a.AddPointValues() < b.AddPointValues();
 
@@ -23,6 +24,7 @@ namespace TableTopBot
             public void AddGame(string name, uint playerCount, GameType type, uint rank, uint length)
             {
                 _gamesPlayed.Add(new Game(name, NumberGamesPlayed, type, playerCount, rank, length));
+                ++NumberGamesPlayed;
             }
             public void RemoveGame(int id) => _gamesPlayed.RemoveAll(game => game.Id == id);
 
@@ -52,11 +54,11 @@ namespace TableTopBot
                     }
                 }
                 else{
-                    gamelist += _gamesPlayed[list_games].GameAttributes();
+                    gamelist += _gamesPlayed.FirstOrDefault(game => game.Id == list_games)!.GameAttributes();
                 }
                 return gamelist; 
             }
-            public string ShowAchievements(bool showAll = false, string id = default(String)!){
+            public string ShowAchievements(bool showAll = false, string? name = null){
                 string achievementlist = "";
                 if(showAll)
                 {   
@@ -65,7 +67,7 @@ namespace TableTopBot
                             achievementlist += (_allAchievements[i].AchievementAttributes() + "\n\n");
                     }
                 }
-                else if (id == default(String))
+                else if (string.IsNullOrEmpty(name))
                 {
                    for(int i = 0; i < Achievements.Count; ++i)
                     {
@@ -74,7 +76,7 @@ namespace TableTopBot
                 } 
                 else
                 {
-                    achievementlist += Achievements.FirstOrDefault(achievement => achievement.Name == id)!.AchievementAttributes() ?? throw new ArgumentException("Achievement Not Found");
+                    achievementlist += Achievements.FirstOrDefault(achievement => achievement.Name == name)!.AchievementAttributes() ?? throw new ArgumentException("Achievement Not Found");
                 }
                 return achievementlist; 
             }
@@ -109,14 +111,15 @@ namespace TableTopBot
             }
 
             public string GameAttributes(){
-                List<string> gameAttributes = new List<string>();
-                gameAttributes.Add("Name: " + Name.ToString());
-                gameAttributes.Add("ID: " + Id.ToString());
-                gameAttributes.Add("Game Type: " + Type.ToString());
-                gameAttributes.Add("Ranking: " +  Rank.ToString());
-                gameAttributes.Add("Game Length: " + GameLengthInMinutes.ToString() + " minutes");
-                gameAttributes.Add("Points: " + Xp.ToString());
-                
+                List<string> gameAttributes = new List<string>(){
+                    $"Name: {Name}",
+                    $"ID: {Id}",
+                    $"Game Type: {Type}",
+                    $"Player Count: {PlayerCount}",
+                    $"Ranking: {Rank}",
+                    $"Game Length: {GameLengthInMinutes} minutes",
+                    $"Points: {Xp}"
+                };
                 return String.Join("\n",gameAttributes);
             }
             private int ComputeXp()
@@ -152,15 +155,15 @@ namespace TableTopBot
             public int XpValue{get;set;}
             public bool IsClaimed = false;
             
+            
             public string AchievementAttributes(){
-                try{
-                    
-                    List<string> achievementAttributes = new List<string>();
-                    achievementAttributes.Add("Name: " + Name!);
-                    achievementAttributes.Add("Description: " + Description!);
-                    achievementAttributes.Add("Points: " + XpValue.ToString());
-                    achievementAttributes.Add("Claimed: " + IsClaimed.ToString());
-                    
+                try{   
+                    List<string> achievementAttributes = new List<string>(){
+                        $"Name: {Name}",
+                        $"Description: {Description}",
+                        $"Points: {XpValue}",
+                        $"Claimed: {IsClaimed}",
+                    };
                     return String.Join("\n", achievementAttributes);
                 }
                 catch{
@@ -174,6 +177,8 @@ namespace TableTopBot
         {
             0, //need to add more ticket values
         };
+        
+        private static readonly List<Achievement> DefaultAchievements = JsonSerializer.Deserialize<List<Achievement>>(File.ReadAllText("Achievement.json"))!;
         
         private readonly List<User> Users = new();
 
