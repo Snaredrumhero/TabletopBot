@@ -46,39 +46,69 @@ namespace TableTopBot
                 Achievement achievement = _allAchievements.FirstOrDefault(achievement => achievement.Name == achievementName) ?? throw new ArgumentException("Achievement Not Found");
                 achievement.IsClaimed = false;
             }
-            public string ShowGames(int list_games = Int32.MinValue){
+            public List<string> ShowGames(int list_games = Int32.MinValue){
+                List<string> embedlist = new List<string>();
                 string gamelist = "";
+                
                 if(list_games == Int32.MinValue){   
                     for(int i = 0; i < _gamesPlayed.Count(); ++i){
-                            gamelist += (_gamesPlayed[i].GameAttributes() + "\n\n");
+                        //gamelist += (_gamesPlayed[i].GameAttributes() + "\n\n");
+                        gamelist += (_gamesPlayed[i].GameAttributes() + "\n\n");
+                        if((i+1)%5 == 0){
+                            embedlist.Add(gamelist);
+                            gamelist = "";
+                        }
+                    }
+                    if(!string.IsNullOrEmpty(gamelist)){
+                        embedlist.Add(gamelist);
                     }
                 }
                 else{
                     gamelist += _gamesPlayed.FirstOrDefault(game => game.Id == list_games)!.GameAttributes();
+                    embedlist.Add(gamelist);
                 }
-                return gamelist; 
+                //return gamelist;
+                return embedlist; 
             }
-            public string ShowAchievements(bool showAll = false, string? name = null){
+            public List<string> ShowAchievements(bool showAll = false, string? name = null){
+                List<string> embedlist = new List<string>();
                 string achievementlist = "";
+                
                 if(showAll)
                 {   
                     for(int i = 0; i < _allAchievements.Count; ++i)
                     {
-                            achievementlist += (_allAchievements[i].AchievementAttributes() + "\n\n");
+                        achievementlist += (_allAchievements[i].AchievementAttributes() + "\n\n");
+                        if((i+1)%5 == 0){
+                            embedlist.Add(achievementlist);
+                            achievementlist = "";
+                        }
                     }
+                    if(!string.IsNullOrEmpty(achievementlist)){
+                        embedlist.Add(achievementlist);
+                    }
+                    
                 }
                 else if (string.IsNullOrEmpty(name))
                 {
                    for(int i = 0; i < Achievements.Count; ++i)
                     {
-                            achievementlist += (Achievements[i].AchievementAttributes() + "\n\n");
+                        achievementlist += (Achievements[i].AchievementAttributes() + "\n\n");
+                        if((i+1)%5 == 0){
+                            embedlist.Add(achievementlist);
+                            achievementlist = "";
+                        }
+                    }
+                    if(!string.IsNullOrEmpty(achievementlist)){
+                        embedlist.Add(achievementlist);
                     }
                 } 
                 else
                 {
                     achievementlist += Achievements.FirstOrDefault(achievement => achievement.Name == name)!.AchievementAttributes() ?? throw new ArgumentException("Achievement Not Found");
+                    embedlist.Add(achievementlist);
                 }
-                return achievementlist; 
+                return embedlist; 
             }
         }
         public class Game

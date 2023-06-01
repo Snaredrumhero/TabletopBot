@@ -5,8 +5,8 @@ namespace TableTopBot
 {
     internal class XPModule : Module
     {
-        public SocketTextChannel AnnouncementChannel() => Bot.Server().GetTextChannel(1108244408027066468);
-        public SocketTextChannel CommandChannel() => Bot.Server().GetTextChannel(1108244408027066468);
+        public SocketTextChannel AnnouncementChannel() => Bot.Server().GetTextChannel(1106217661194571806);
+        public SocketTextChannel CommandChannel() => Bot.Server().GetTextChannel(1104487160226258964);
 
         private XpStorage xpSystem = new XpStorage();
         public XPModule(Program _bot) : base(_bot) { }
@@ -140,7 +140,7 @@ namespace TableTopBot
                             int gameId = Convert.ToInt32(_command.Data.Options.ElementAt(1).Value);
                             XpStorage.User user = xpSystem.GetUser(((SocketUser) _command.Data.Options.First().Value).Id);
                             
-                            string gameName = user.ShowGames(gameId);
+                            string gameName = user.ShowGames(gameId).First();
                             user.RemoveGame(gameId);
                                 
                             await _command.FollowupAsync(embed: (new EmbedBuilder().AddField("Game Removed", 
@@ -333,7 +333,7 @@ namespace TableTopBot
                             user.AddGame(gameName, playerCount, type, rank, time);
                                 
                             await _command.RespondAsync(embed: new EmbedBuilder().AddField("Added game to profile", 
-                                user.ShowGames(Convert.ToInt32(user.NumberGamesPlayed-1))).Build(), ephemeral: true);
+                                user.ShowGames(Convert.ToInt32(user.NumberGamesPlayed-1)).First()).Build(), ephemeral: true);
                         }
                         catch
                         {
@@ -392,7 +392,7 @@ namespace TableTopBot
                         {
                             XpStorage.User user = xpSystem.GetUser(_command.User.Id);
                             int id = Convert.ToInt32(_command.Data.Options.First().Value);
-                            string gameName = user.ShowGames(id);
+                            string gameName = user.ShowGames(id).First();
                            
                             user.RemoveGame(id);
                             //Removes a game from the caller's profile
@@ -424,8 +424,19 @@ namespace TableTopBot
                     {
                         try
                         {
-                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Games", 
-                                xpSystem.GetUser(_command.User.Id).ShowGames()).Build(), ephemeral: true);
+                            List<EmbedBuilder> embeds = new List<EmbedBuilder>();
+                            List<string> gamelist = xpSystem.GetUser(_command.User.Id).ShowGames();
+                            
+                            
+                            
+                            for(int i = 0; i < gamelist.Count; ++i){
+                                embeds.Add(new EmbedBuilder().AddField("Your Games", gamelist[i]));
+                            }
+                            await _command.RespondAsync(embed: embeds[0].Build(), ephemeral: true);
+                            for (int j = 1; j < embeds.Count; ++j){
+                                await _command.FollowupAsync(embed: embeds[j].Build(), ephemeral: true);
+                            }
+                            
                         }
                         catch
                         {
@@ -450,7 +461,7 @@ namespace TableTopBot
                             
                             user.ClaimAchievement(achievementName); 
                             await _command.RespondAsync(embed: new EmbedBuilder().AddField("Added achievement to profile", 
-                                user.ShowAchievements(name: achievementName)).Build(), ephemeral: true);
+                                user.ShowAchievements(name: achievementName).First()).Build(), ephemeral: true);
                         }
                         catch{
                             throw;
@@ -511,9 +522,12 @@ namespace TableTopBot
                     {
                         try
                         {      
+                            XpStorage.User user = xpSystem.GetUser(_command.User.Id); 
+                            List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
+                            List<string> achievementlist = new List<string>();
                             bool isShowAll = false;
                             string? achievementName = null;
-                            XpStorage.User user = xpSystem.GetUser(_command.User.Id); 
+                            
 
                             foreach (SocketSlashCommandDataOption? option in _command.Data.Options)
                             {
@@ -533,8 +547,16 @@ namespace TableTopBot
                                         break;
                                 }
                             }
-                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Achievements", 
-                                user.ShowAchievements(showAll: isShowAll, name: achievementName)).Build(), ephemeral: true);
+                            achievementlist = user.ShowAchievements(showAll: isShowAll, name: achievementName);
+                            for(int i = 0; i < achievementlist.Count; ++i){
+                                embedlist.Add(new EmbedBuilder().AddField("Your Achievements", achievementlist[i]));
+                            }
+                            
+                            await _command.RespondAsync(embed: embedlist[0].Build(), ephemeral: true);
+                            for(int j = 1; j < embedlist.Count; ++j){
+                                await _command.FollowupAsync(embed: embedlist[j].Build(), ephemeral: true);
+                            }
+                       
                         }
                         catch
                         {
