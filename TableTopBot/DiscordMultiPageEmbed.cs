@@ -1,4 +1,6 @@
-﻿using Discord;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection.Emit;
+using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
 
@@ -17,25 +19,34 @@ namespace TableTopBot
 
         public bool IsLastPage => !TryGetPage(PageNumber + 1, out _);
 
-        public async Task UpdatePage(int pageNumber)
+        public async Task<bool> UpdatePage(int pageNumber)
         {
-            EmbedBuilder builder = GetPage(pageNumber);
+            EmbedBuilder? builder = GetPageOrDefault(pageNumber);
+
+            if (builder is null)
+            {
+                return false;
+            }
+
             PageNumber = pageNumber;
+            
             await _response.ModifyAsync(z =>
             {
                 z.Embeds = new Optional<Embed[]>(new[] { builder.Build() });
                 z.Components = new Optional<MessageComponent>(GetButtons(PageNumber == 0, IsLastPage).Build());
             });
+            
+            return true;
         }
 
-        public async Task NextPage()
+        public async Task<bool> NextPage()
         {
-            await UpdatePage(PageNumber + 1);
+            return await UpdatePage(PageNumber + 1);
         }
 
-        public async Task PreviousPage()
+        public async Task<bool> PreviousPage()
         {
-            await UpdatePage(PageNumber - 1);
+            return await UpdatePage(PageNumber - 1);
         }
 
         public EmbedBuilder GetPage(int pageNumber)
@@ -53,7 +64,12 @@ namespace TableTopBot
             return _pages[pageNumber];
         }
 
-        public bool TryGetPage(int pageNumber, out EmbedBuilder? builder)
+        public EmbedBuilder? GetPageOrDefault(int pageNumber, EmbedBuilder? defaultBuilder = null)
+        {
+            return TryGetPage(pageNumber, out EmbedBuilder? builder) ? builder : defaultBuilder;
+        }
+
+        public bool TryGetPage(int pageNumber, [MaybeNullWhen(false)] out EmbedBuilder builder)
         {
             try
             {
