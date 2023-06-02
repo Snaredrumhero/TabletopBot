@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Reflection.Emit;
 using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
@@ -9,7 +8,7 @@ namespace TableTopBot
     public class MultiPageEmbed
     {
         private readonly RestFollowupMessage _response;
-        private readonly List<EmbedBuilder>? _pages;
+        private readonly EmbedBuilder[]? _pages;
 
         public int PageNumber
         {
@@ -56,7 +55,7 @@ namespace TableTopBot
                 return _customGetPage(pageNumber);
             }
 
-            if (pageNumber < 0 || pageNumber >= _pages!.Count)
+            if (pageNumber < 0 || pageNumber >= _pages!.Length)
             {
                 throw new ArgumentOutOfRangeException(nameof(pageNumber));
             }
@@ -112,9 +111,9 @@ namespace TableTopBot
                 interaction.DeferAsync(ephemeral: true).GetAwaiter().GetResult();
             }
 
-            _pages = pages.ToList();
+            _pages = pages.ToArray();
 
-            if (_pages.Count == 0)
+            if (_pages.Length== 0)
             {
                 throw new InvalidOperationException("Pages must contain at least one item");
             }
