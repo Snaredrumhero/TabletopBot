@@ -15,7 +15,7 @@ namespace TableTopBot
             private set;
         }
 
-        public bool IsLastPage => TryGetPage(PageNumber + 1, out _);
+        public bool IsLastPage => !TryGetPage(PageNumber + 1, out _);
 
         public async Task UpdatePage(int pageNumber)
         {
