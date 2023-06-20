@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using System.Text.Json;
+using Discord;
 using Discord.Interactions;
 using Discord.Rest;
 using Discord.WebSocket;
@@ -52,7 +53,8 @@ namespace TableTopBot
             
             //Init all moduels
             await new XPModule(this).InitilizeModule();
-
+            
+            PrivateKey PrivateVariables = JsonSerializer.Deserialize<PrivateKey>(File.ReadAllText("PrivateVariables.json"));
             //run bot
             await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
             await Client.StartAsync();
@@ -367,5 +369,10 @@ namespace TableTopBot
 
         //Adds all events to the client
         public abstract Task InitilizeModule();
+    }
+    
+    public struct PrivateKey 
+    {
+        public string KEY {get;set;}
     }
 }
