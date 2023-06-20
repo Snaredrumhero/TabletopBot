@@ -33,18 +33,17 @@ namespace TableTopBot
                     log += $"\n{o.Name}: {o.Value}";
                 await LogChannel().SendMessageAsync(log);
             };
-            Client.SlashCommandExecuted += async (SocketSlashCommand _command) => //command calls
+            Client.SlashCommandExecuted += async (SocketSlashCommand _command) => //Command calls
             {
                 if (Callbacks.ContainsKey(_command.CommandId))
                     try { await Callbacks[_command.CommandId](_command); }
                     catch (Exception ex) { await _command.RespondAsync(text: "Error, " + ex.Message, ephemeral: true); }
             };
-            Client.ButtonExecuted += async (SocketMessageComponent _button) => //confirmation
+            Client.ButtonExecuted += async (SocketMessageComponent _button) =>    //Confirmation
             { 
                 if (Buttons.ContainsKey(_button.Data.CustomId))
                 {
                     await _button.DeferAsync();
-                    await _button.DeleteOriginalResponseAsync();
                     await Buttons[_button.Data.CustomId].Item1(Buttons[_button.Data.CustomId].Item2);
                     Buttons.Remove(_button.Data.CustomId);
                 }
@@ -298,18 +297,12 @@ namespace TableTopBot
         public void AddWebhooksUpdatedCallback(Func<SocketGuild, SocketChannel, Task> f) =>
             Client.WebhooksUpdated += f;
         #endregion
-
-        public async Task AddGuildCommand(SlashCommandBuilder builder)
-        {
-            try { await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(builder.Build()); }
-            catch (Exception ex) { Debug.WriteLine(ex); }
-        }
+        //Awaits a list of console commands (currentlu only "Quit")
         private Task AwaitConsoleCommands()
         {
-            Console.Write("> ");
             string? input = Console.ReadLine();
             while(input == null || input != "Quit") {
-                Console.Write("Command not recognized\n> ");
+                Console.Write("Command not recognized\n");
                 input = Console.ReadLine(); 
             }
             return Task.CompletedTask;
@@ -318,11 +311,13 @@ namespace TableTopBot
         //Commands
         private static Dictionary<ulong, Func<SocketSlashCommand, Task>> Callbacks = new Dictionary<ulong, Func<SocketSlashCommand, Task>>();
         private static Dictionary<string, Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>> Buttons = new Dictionary<string, Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>>();
+        //Adds a command to the current guild
         public async Task AddCommand(Command _command)
         {
             try  { Callbacks.Add((await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.GetCallback()); }
             catch (Exception ex) { Debug.WriteLine(ex); }
         }
+        //Represents a full command with confirmation support
         public class Command
         {
             private static ulong buttonsCreated = 0;
@@ -345,10 +340,9 @@ namespace TableTopBot
             }
             public Func<SocketSlashCommand, Task> GetCallback()
             {
-                return !requiresConfirmation ? callback : (async (SocketSlashCommand _command) =>
+                return !requiresConfirmation ? callback : (async (_command) =>
                 {
-                    ComponentBuilder cb = new ComponentBuilder();
-                    cb.WithButton("Confirm", buttonsCreated.ToString(), ButtonStyle.Danger);
+                    ComponentBuilder cb = new ComponentBuilder().WithButton("Confirm", buttonsCreated.ToString(), ButtonStyle.Danger);
                     Buttons.Add(buttonsCreated.ToString(), new Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>(callback, _command));
                     buttonsCreated++;
                     await _command.RespondAsync(ephemeral: true, components: cb.Build());
