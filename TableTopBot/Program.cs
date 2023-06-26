@@ -8,38 +8,44 @@ namespace TableTopBot
 {
     internal class Program
     {
-        //The bot's client
-        private DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
-        //Channels
-        public SocketGuild Server() => Client.GetGuild(1047337930965909646);
-        public SocketTextChannel LogChannel() => Server().GetTextChannel(1106257696388296754);
+        ///The bot's client
+        private static DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
+        ///Channels
+        public static SocketGuild Server() => Client.GetGuild(1047337930965909646);
+        public static SocketTextChannel LogChannel() => Server().GetTextChannel(1106257696388296754);
         
         public static Task Main(string[] args) => new Program().MainAsync();
 
         private async Task MainAsync()
         {
             Console.Title = "TabletopBot";
+            bool acceptingCommands = false;
             InteractionService interactionService = new InteractionService(Client.Rest);
-            //Required Lambdas
-            Client.Log += (LogMessage msg) => //Console logging
+            ///Required Lambdas
+            Client.Log += (LogMessage msg) => ///Console logging
             {
                 Console.WriteLine(msg.ToString());
                 return Task.CompletedTask;
             };
-            Client.SlashCommandExecuted += async (SocketSlashCommand _command) => //Command logging
+            Client.SlashCommandExecuted += async (SocketSlashCommand _command) => ///Command logging
             {
                 string log = $"User: {_command.User.Username}\nCommand: {_command.CommandName}\nParams: ";
                 foreach (SocketSlashCommandDataOption o in _command.Data.Options.ToList())
                     log += $"\n{o.Name}: {o.Value}";
                 await LogChannel().SendMessageAsync(log);
             };
-            Client.SlashCommandExecuted += async (SocketSlashCommand _command) => //Command calls
+            Client.SlashCommandExecuted += async (SocketSlashCommand _command) => ///Command calls
             {
                 if (Callbacks.ContainsKey(_command.CommandId))
                     try { await Callbacks[_command.CommandId](_command); }
-                    catch (Exception ex) { await _command.RespondAsync(text: "Error, " + ex.Message, ephemeral: true); }
+                    catch (Exception ex) 
+                    {
+                        string error = $"Error: {ex.Message}";
+                        Console.WriteLine(error);
+                        await _command.RespondAsync(text: error, ephemeral: true); 
+                    }
             };
-            Client.ButtonExecuted += async (SocketMessageComponent _button) =>    //Confirmation
+            Client.ButtonExecuted += async (SocketMessageComponent _button) =>    ///Confirmation
             { 
                 if (Buttons.ContainsKey(_button.Data.CustomId))
                 {
@@ -48,20 +54,30 @@ namespace TableTopBot
                     Buttons.Remove(_button.Data.CustomId);
                 }
             };
-            
-            //Init all moduels
+
+            ///Init all moduels
             await new XPModule(this).InitilizeModule();
 
-            //run bot
+            ///Fully connected
+            Client.Connected += async () =>
+            {
+                await Client.SetGameAsync("Board Games");
+                acceptingCommands = true;
+            };
+
+            ///run bot
             await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
             await Client.StartAsync();
+            await Client.SetGameAsync("Getting The Cart Out");
+            while (!acceptingCommands) 
+                await Task.Delay(1000);
             await AwaitConsoleCommands();
             await Server().DeleteApplicationCommandsAsync();
             await Client.LogoutAsync();
             
         }
 
-        //all possible callback events that can be used
+        ///all possible callback events that can be used
         #region Callback Adders
         public void AddApplicationCommandCreatedCallback(Func<SocketApplicationCommand, Task> f) =>
             Client.ApplicationCommandCreated += f; 
@@ -297,27 +313,28 @@ namespace TableTopBot
         public void AddWebhooksUpdatedCallback(Func<SocketGuild, SocketChannel, Task> f) =>
             Client.WebhooksUpdated += f;
         #endregion
-        //Awaits a list of console commands (currentlu only "Quit")
+        ///Awaits a list of console commands (currently only "Quit")
         private Task AwaitConsoleCommands()
         {
+            Console.Write(">");
             string? input = Console.ReadLine();
             while(input == null || input != "Quit") {
-                Console.Write("Command not recognized\n");
+                Console.Write("Command not recognized\n>");
                 input = Console.ReadLine(); 
             }
             return Task.CompletedTask;
         }
 
-        //Commands
+        ///Commands
         private static Dictionary<ulong, Func<SocketSlashCommand, Task>> Callbacks = new Dictionary<ulong, Func<SocketSlashCommand, Task>>();
         private static Dictionary<string, Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>> Buttons = new Dictionary<string, Tuple<Func<SocketSlashCommand, Task>, SocketSlashCommand>>();
-        //Adds a command to the current guild
+        ///Adds a command to the current guild
         public async Task AddCommand(Command _command)
         {
             try  { Callbacks.Add((await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.GetCallback()); }
             catch (Exception ex) { Debug.WriteLine(ex); }
         }
-        //Represents a full command with confirmation support
+        ///Represents a full command with confirmation support
         public class Command
         {
             private static ulong buttonsCreated = 0;
@@ -350,16 +367,16 @@ namespace TableTopBot
             }
         }
     }
-    //A class to be overridden to create modules
+    ///A class to be overridden to create modules
     internal abstract class Module
     {
-        //The Program this Module is attached to
+        ///The Program this Module is attached to
         protected Program Bot;
 
-        //Constructor
+        ///Constructor
         public Module(Program bot) { Bot = bot; }
 
-        //Adds all events to the client
+        ///Adds all events to the client
         public abstract Task InitilizeModule();
     }
 }
