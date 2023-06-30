@@ -7,8 +7,14 @@ namespace TableTopBot
 {
     public class MultiPageEmbed
     {
-        private readonly RestFollowupMessage _response;
+        private RestFollowupMessage? _response;
         private readonly EmbedBuilder[]? _pages;
+        
+        string text;
+        bool isTts;
+        bool ephemeral;
+        AllowedMentions allowedMentions;
+        RequestOptions options;
 
         public int PageNumber
         {
@@ -29,7 +35,7 @@ namespace TableTopBot
 
             PageNumber = pageNumber;
             
-            await _response.ModifyAsync(z =>
+            await _response!.ModifyAsync(z =>
             {
                 z.Embeds = new Optional<Embed[]>(new[] { builder.Build() });
                 z.Components = new Optional<MessageComponent>(GetButtons(PageNumber == 0, IsLastPage).Build());
@@ -91,6 +97,18 @@ namespace TableTopBot
             c.WithButton(ButtonBuilder.CreatePrimaryButton("Next Page", "next-button").WithDisabled(isNextDisabled));
             return c;
         }
+        
+        public void StartPage(SocketInteraction interaction)
+        {
+               if (!interaction.HasResponded)
+            {
+                interaction.DeferAsync(ephemeral: true).GetAwaiter().GetResult();
+            } 
+            ComponentBuilder c = GetButtons(true, false);
+
+            _response = interaction.FollowupAsync(embed: _pages!.First().Build(), text: text, isTTS: isTts, ephemeral: ephemeral, allowedMentions: allowedMentions, 
+                components: c.Build(), options: options, embeds: null).GetAwaiter().GetResult();
+        }
 
         /// <param name="interaction">
         /// The interaction the embeds are intended for. Calling this constructor will send a Followup
@@ -103,26 +121,22 @@ namespace TableTopBot
         /// <param name="ephemeral">True if only the user who triggered the interaction can see the followup, false otherwise</param>
         /// <param name="allowedMentions">The allowed mentions for the followup</param>
         /// <param name="options">The request options for the followup</param>
-        public MultiPageEmbed(SocketInteraction interaction, IEnumerable<EmbedBuilder> pages, string? text = null, bool isTts = false,
-            bool ephemeral = false, AllowedMentions? allowedMentions = null, RequestOptions? options = null)
+        public MultiPageEmbed(IEnumerable<EmbedBuilder> pages, string? Text = null, bool IsTts = false,
+            bool Ephemeral = false, AllowedMentions? AllowedMentions = null, RequestOptions? Options = null)
         {
-            if (!interaction.HasResponded)
-            {
-                interaction.DeferAsync(ephemeral: true).GetAwaiter().GetResult();
-            }
-
+            
             _pages = pages.ToArray();
 
             if (_pages.Length== 0)
             {
                 throw new InvalidOperationException("Pages must contain at least one item");
             }
-
-            ComponentBuilder c = GetButtons(true, false);
-
-            _response = interaction.FollowupAsync(embed: _pages.First().Build(), text: text, isTTS: isTts, ephemeral: ephemeral, allowedMentions: allowedMentions, 
-                components: c.Build(), options: options, embeds: null).GetAwaiter().GetResult();
             _customGetPage = null;
+            text = Text!;
+            isTts = IsTts;
+            ephemeral = Ephemeral;
+            allowedMentions = AllowedMentions!;
+            options = Options!;
             PageNumber = 0;
         }
 
@@ -137,21 +151,19 @@ namespace TableTopBot
         /// <param name="ephemeral">True if only the user who triggered the interaction can see the followup, false otherwise</param>
         /// <param name="allowedMentions">The allowed mentions for the followup</param>
         /// <param name="options">The request options for the followup</param>
-        public MultiPageEmbed(SocketInteraction interaction, Func<int, EmbedBuilder> getPageFunction, string? text = null, bool isTts = false, 
-            bool ephemeral = false, AllowedMentions? allowedMentions = null, RequestOptions? options = null)
+        public MultiPageEmbed(Func<int, EmbedBuilder> getPageFunction, string? Text = null, bool IsTts = false,
+            bool Ephemeral = false, AllowedMentions? AllowedMentions = null, RequestOptions? Options = null)
         {
-            if (!interaction.HasResponded)
-            {
-                interaction.DeferAsync(ephemeral: true).GetAwaiter().GetResult();
-            }
 
-            ComponentBuilder c = GetButtons(true, false);
-
-            _response = interaction.FollowupAsync(embed: getPageFunction(0).Build(), text: text, isTTS: isTts, ephemeral: ephemeral, allowedMentions: allowedMentions, 
-                components: c.Build(), options: options, embeds: null).GetAwaiter().GetResult();
             _pages = null;
             _customGetPage = getPageFunction;
             PageNumber = 0;
+            
+            text = Text!;
+            isTts = IsTts;
+            ephemeral = Ephemeral;
+            allowedMentions = AllowedMentions!;
+            options = Options!;
         }
     }
 }
