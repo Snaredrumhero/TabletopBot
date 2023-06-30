@@ -4,7 +4,6 @@ using Discord.Interactions;
 using Discord.Rest;
 using Discord.WebSocket;
 using System.Diagnostics;
-using System.Text.Json;
 namespace TableTopBot
 {
     internal class Program
@@ -80,13 +79,6 @@ namespace TableTopBot
             };
 
             ///Init all moduels
-<<<<<<< HEAD
-            await new XPModule(this).InitilizeModule();
-            
-            PrivateKey PrivateVariables = JsonSerializer.Deserialize<PrivateKey>(File.ReadAllText("PrivateVariables.json"));
-            //run bot
-            await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
-=======
             
             ///Fully connected
             Client.Connected += async () =>
@@ -97,7 +89,6 @@ namespace TableTopBot
 
             ///run bot
             await Client.LoginAsync(TokenType.Bot, PrivateVariables!.KEY);
->>>>>>> 83a5afb (Implemented MultiPageEmbed to code and added Bot Keys/Channels to json file)
             await Client.StartAsync();
             await Client.SetGameAsync("Getting The Cart Out");
             while (!acceptingCommands) 
@@ -411,11 +402,6 @@ namespace TableTopBot
         public abstract Task InitilizeModule();
     }
     
-<<<<<<< HEAD
-    public struct PrivateKey 
-    {
-        public string KEY {get;set;}
-=======
     internal class PrivateVariable 
     {
         public string? KEY {get;set;}   
@@ -423,6 +409,5 @@ namespace TableTopBot
         public ulong LogChannel {get;set;}
         public ulong AnnouncementChannel {get;set;}
         public ulong CommandChannel {get;set;}
->>>>>>> 83a5afb (Implemented MultiPageEmbed to code and added Bot Keys/Channels to json file)
     }
 }
