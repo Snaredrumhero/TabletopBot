@@ -6,14 +6,14 @@ namespace TableTopBot
 {
     internal class XPModule : Module
     {
-        enum GameType { Ranked = 1, CoOp = 2, Teams = 3, Party = 4 } ///Represents the types of games
+        public enum GameType { Ranked = 1, CoOp = 2, Teams = 3, Party = 4 } ///Represents the types of games
 
         ///Sub Classes
         /**
          * XpStorage
          * Stores an all day event for Bobcat Tabletop
          */
-        class XpStorage
+        public class XpStorage
         {
             ///Sub Classes
             /**
@@ -30,7 +30,8 @@ namespace TableTopBot
                 public readonly string Pid;                         ///The user's Ohio University ID
                 public bool IsRaffleWinner;                         ///If the user has won a raffle prize
                 private ushort NumberGamesPlayed;                   ///only used for tracking game ids
-
+                
+                public MultiPageEmbed? pageEmbed;
                 ///Constructor
                 public User(SocketUser user, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null)
                 {
@@ -60,9 +61,9 @@ namespace TableTopBot
                 public List<Achievement> Achievements => DefaultAchievements.Where(achievement => _achievementsClaimed.Contains(achievement.Data.Name)).ToList();
                 public int TotalPoints() { return _gamesPlayed.Select(game => game.XpValue).Sum() + Achievements.Select(achievement => achievement.Data.XpValue).Sum(); }
                 public override string ToString() { return $"{DiscordUser.Username}\nPID: {Pid}\nPoints: {TotalPoints()}\nClaimed Raffle: {IsRaffleWinner}"; }
-                public List<string> ShowGames(int list_games = Int32.MinValue)
+                public List<EmbedBuilder> ShowGames(int list_games = Int32.MinValue)
                 {
-                    List<string> embedlist = new List<string>();
+                    List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
                     string gamelist = "";
 
                     if (list_games == Int32.MinValue)
@@ -72,24 +73,24 @@ namespace TableTopBot
                             gamelist += (_gamesPlayed[i].ToString() + "\n\n");
                             if ((i + 1) % 5 == 0)
                             {
-                                embedlist.Add(gamelist);
+                                embedlist.Add(new EmbedBuilder().AddField("Your Games",gamelist));
                                 gamelist = "";
                             }
                         }
                         if (!string.IsNullOrEmpty(gamelist))
-                            embedlist.Add(gamelist);
+                            embedlist.Add(new EmbedBuilder().AddField("Your Games",gamelist));
                     }
                     else
                     {
                         gamelist += _gamesPlayed.FirstOrDefault(game => game.Data.Id == list_games)!.ToString();
-                        embedlist.Add(gamelist);
+                        embedlist.Add(new EmbedBuilder().AddField("Found Game",gamelist));
                     }
                     //return gamelist;
                     return embedlist;
                 }
-                public List<string> ShowAchievements(bool showAll = false, string? name = null)
+                public List<EmbedBuilder> ShowAchievements(bool showAll = false, string? name = null)
                 {
-                    List<string> embedlist = new List<string>();
+                    List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
                     string achievementlist = "";
 
                     if (showAll)
@@ -99,12 +100,12 @@ namespace TableTopBot
                             achievementlist += $"{DefaultAchievements[i]}\nClaimed: {_achievementsClaimed.Contains(DefaultAchievements[i].Data.Name)}\n\n";
                             if ((i + 1) % 5 == 0)
                             {
-                                embedlist.Add(achievementlist);
+                                embedlist.Add((new EmbedBuilder().AddField("List of Achievements", achievementlist)));
                                 achievementlist = "";
                             }
                         }
                         if (!string.IsNullOrEmpty(achievementlist))
-                            embedlist.Add(achievementlist);
+                            embedlist.Add(new EmbedBuilder().AddField("List of Achievements",achievementlist));
 
                     }
                     else if (string.IsNullOrEmpty(name))
@@ -114,17 +115,17 @@ namespace TableTopBot
                             achievementlist += $"{Achievements[i]}\n\n";
                             if ((i + 1) % 5 == 0)
                             {
-                                embedlist.Add(achievementlist);
+                                embedlist.Add((new EmbedBuilder().AddField("Your Achievements", achievementlist)));
                                 achievementlist = "";
                             }
                         }
                         if (!string.IsNullOrEmpty(achievementlist))
-                            embedlist.Add(achievementlist);
+                            embedlist.Add((new EmbedBuilder().AddField("Your Achievements", achievementlist)));
                     }
                     else
                     {
                         achievementlist += Achievements.FirstOrDefault(achievement => achievement.Data.Name == name)!.ToString() ?? throw new ArgumentException("Achievement Not Found");
-                        embedlist.Add(achievementlist);
+                        embedlist.Add((new EmbedBuilder().AddField("Achievement Found", achievementlist)));
                     }
                     return embedlist;
                 }
@@ -258,9 +259,9 @@ namespace TableTopBot
             }
             public struct AchievementData
             {
-                public string Name;        ///The name of the achievement
-                public string Description; ///The requirements to get it
-                public int XpValue;        ///The reward amount
+                public string Name{get;set;}        ///The name of the achievement
+                public string Description{get;set;} ///The requirements to get it
+                public int XpValue{get;set;}        ///The reward amount
 
                 public AchievementData(string name, string description, int xpValue)
                 {
@@ -272,7 +273,7 @@ namespace TableTopBot
 
             ///Psudo Const
             private static readonly int[] TicketThresholds = new int[] { 0, 75, 300, 675, 1250 };
-            private static readonly List<Achievement> DefaultAchievements = (JsonSerializer.Deserialize<AchievementData[]>(File.ReadAllText("./Achievements.json")) ?? throw new NullReferenceException("No Data In Achievement File")).Select(a => (Achievement)a).ToList();
+            private static readonly List<Achievement> DefaultAchievements = (JsonSerializer.Deserialize<AchievementData[]>(File.ReadAllText("./Achievement.json")) ?? throw new NullReferenceException("No Data In Achievement File")).Select(a => (Achievement)a).ToList();
             private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions { WriteIndented = true, IncludeFields = true };
 
             ///Data
@@ -304,7 +305,8 @@ namespace TableTopBot
             public List<User> GetTopXUsers(int x)
             {
                 if (x > Users.Count)
-                    throw new ArgumentOutOfRangeException(nameof(x), "There aren't enough users to populate the list");
+                    x = Users.Count;
+                    //throw new ArgumentOutOfRangeException(nameof(x), "There aren't enough users to populate the list");
                 Users.Sort();
                 return Users.Take(x).ToList();
             }
@@ -348,9 +350,10 @@ namespace TableTopBot
         }
 
         ///Variables
-        public SocketTextChannel AnnouncementChannel() => Program.Server().GetTextChannel(1106217661194571806);
-        public SocketTextChannel CommandChannel() => Program.Server().GetTextChannel(1104487160226258964);
-        private XpStorage? xpSystem;
+        private static PrivateVariable? PrivateVariables = JsonSerializer.Deserialize<PrivateVariable>(File.ReadAllText("./PrivateVariables.json"));
+        public SocketTextChannel AnnouncementChannel() => Program.Server().GetTextChannel(PrivateVariables!.AnnouncementChannel);
+        public SocketTextChannel CommandChannel() => Program.Server().GetTextChannel(PrivateVariables!.CommandChannel);
+        public XpStorage? xpSystem;
         public XPModule(Program _bot) : base(_bot) { }
 
         ///Constructor
@@ -429,13 +432,17 @@ namespace TableTopBot
 
                         ///Get Data
                         List<XpStorage.User> top = xpSystem.GetTopXUsers(3);
-
+                        string temp = "";
+                        for(int i = 0; i < 3 && i < top.Count; ++i)
+                        {
+                            temp += $"\n{i+1}: {top[i].DiscordUser.Mention} - {top[i].TotalPoints()} points\n";
+                        }
                         ///Logs the end of all day message
                         //*note* could display overall statistics for the all-day as well
-                        await AnnouncementChannel().SendMessageAsync(text: $"@everyone Thank you all for participating in {xpSystem.EventName}!\nWe hope you all had fun, here are the results: \n1: {top[0].DiscordUser.Username} - {top[0].TotalPoints()}\n2: {top[0].DiscordUser.Username} - {top[0].TotalPoints()}\n3: {top[0].DiscordUser.Username} - {top[0].TotalPoints()}\nOnce again thank you all for showing up and we hope to see you at our next event!");
+                        await AnnouncementChannel().SendMessageAsync(text: $"@everyone Thank you all for participating in {xpSystem.EventName}!\nWe hope you all had fun, here are the results: {temp} \nOnce again thank you all for showing up and we hope to see you at our next event!");
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully ended the event."; });
@@ -466,7 +473,7 @@ namespace TableTopBot
                         catch { throw; }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully drew a raffle."; });
@@ -525,11 +532,11 @@ namespace TableTopBot
                             ///Format the string
                             List<XpStorage.User> top = xpSystem.GetTopXUsers(numberOfUsers);
                             string output = "";
-                            for (int i = 0; i < numberOfUsers; i++)
-                                output = string.Join(output, $"{numberOfUsers}: {top[i].DiscordUser.Username} - {top[i].TotalPoints()}");
+                            for (int i = 0; i < top.Count; i++)
+                                output = string.Join(output, $"{i+1}: {top[i].DiscordUser.Username} - {top[i].TotalPoints()}");
 
                             ///Displays the leaderboard
-                            await _command.RespondAsync(embed: new EmbedBuilder().AddField($"Top {numberOfUsers} Users", output).Build(), ephemeral: true);
+                            await _command.RespondAsync(embed: new EmbedBuilder().AddField($"Top {top.Count} Users", output).Build(), ephemeral: true);
                         }
                         catch { throw; }
                     },
@@ -571,7 +578,7 @@ namespace TableTopBot
                         catch { throw; }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed game."; });
@@ -621,7 +628,7 @@ namespace TableTopBot
                         catch { throw; }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed achievement."; });
@@ -673,7 +680,7 @@ namespace TableTopBot
                         }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed player."; });
@@ -724,7 +731,7 @@ namespace TableTopBot
                         catch { throw; }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.RespondAsync(text: "Successfully joined event.", ephemeral: true);
@@ -761,7 +768,7 @@ namespace TableTopBot
                         catch { throw; }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully left event."; });
@@ -828,7 +835,7 @@ namespace TableTopBot
                         catch { throw; }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.RespondAsync(text: "Successfully added game.", ephemeral: true);
@@ -901,7 +908,7 @@ namespace TableTopBot
                         catch { throw; }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed game."; });
@@ -932,16 +939,18 @@ namespace TableTopBot
 
                         try
                         {
-                            ///Gets data
-                            List<string> gamelist = xpSystem.GetUser(_command.User.Id).ShowGames();
-
-                            ///Creates embed
-                            EmbedBuilder embed = new EmbedBuilder();
-                            for (int i = 0; i < gamelist.Count; ++i)
-                                embed.AddField($"Game {i}", gamelist[i]);
-
+                            ///Gets user
+                            
+                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
+                            
+                            ///Gets data and creates embed
+                            List<EmbedBuilder> gamelist = user.ShowGames();
+                            
+                            ///Sets up MultiPageEmbed
+                            user.pageEmbed = new MultiPageEmbed(gamelist);
+                            
                             ///Display's games
-                            await _command.RespondAsync(embed: embed.Build(), ephemeral: true);
+                            user.pageEmbed.StartPage(_command);
                         }
                         catch { throw; }
                     },
@@ -972,10 +981,10 @@ namespace TableTopBot
                         catch { throw; }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully added achievement."; });
+                        await _command.RespondAsync(text: "Successfully added achievement.", ephemeral: true);
                     },
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
@@ -1013,7 +1022,7 @@ namespace TableTopBot
                         catch { throw; }
 
                         ///Saves changes
-                        xpSystem.Save();
+                        await xpSystem.Save();
 
                         ///User Feedback
                         await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed achievement."; });
@@ -1046,7 +1055,7 @@ namespace TableTopBot
                         {
                             ///Gets data
                             XpStorage.User user = xpSystem.GetUser(_command.User.Id);
-                            List<string> achievementlist = new List<string>();
+                            List<EmbedBuilder> achievementlist = new List<EmbedBuilder>();
                             bool isShowAll = false;
                             string? achievementName = null;
 
@@ -1067,15 +1076,17 @@ namespace TableTopBot
                                         break;
                                 }
                             }
+                            ///Create embed
                             achievementlist = user.ShowAchievements(showAll: isShowAll, name: achievementName);
 
-                            ///Create embed
-                            EmbedBuilder embed = new EmbedBuilder();
-                            for (int i = 0; i < achievementlist.Count; ++i)
-                                embed.AddField($"Achievement {i}", achievementlist[i]);
-
                             ///Display achievements
-                            await _command.RespondAsync(embed: embed.Build(), ephemeral: true);
+                            // EmbedBuilder embed = new EmbedBuilder();
+                            // for (int i = 0; i < achievementlist.Count; ++i)
+                            //     embed.AddField($"Achievement {i}", achievementlist[i]);
+
+                            // await _command.RespondAsync(embed: achievementlist[0].Build(), ephemeral: true);
+                            user.pageEmbed = new MultiPageEmbed(achievementlist);
+                            user.pageEmbed.StartPage(_command);
                         }
                         catch { throw; }
                     },

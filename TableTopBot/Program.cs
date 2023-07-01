@@ -3,21 +3,25 @@ using Discord.Interactions;
 using Discord.Rest;
 using Discord.WebSocket;
 using System.Diagnostics;
-
+using System.Text.Json;
 namespace TableTopBot
 {
     internal class Program
     {
         ///The bot's client
+        private static PrivateVariable? PrivateVariables = JsonSerializer.Deserialize<PrivateVariable>(File.ReadAllText("./PrivateVariables.json"));
         private static DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
         ///Channels
-        public static SocketGuild Server() => Client.GetGuild(1047337930965909646);
-        public static SocketTextChannel LogChannel() => Server().GetTextChannel(1106257696388296754);
+        public static SocketGuild Server() => Client.GetGuild(PrivateVariables!.Server);
+        public static SocketTextChannel LogChannel() => Server().GetTextChannel(PrivateVariables!.LogChannel);
         
         public static Task Main(string[] args) => new Program().MainAsync();
 
         private async Task MainAsync()
         {
+            XPModule xPModule = new XPModule(this);
+            await xPModule.InitilizeModule();
+
             Console.Title = "TabletopBot";
             bool acceptingCommands = false;
             InteractionService interactionService = new InteractionService(Client.Rest);
@@ -53,11 +57,31 @@ namespace TableTopBot
                     await Buttons[_button.Data.CustomId].Item1(Buttons[_button.Data.CustomId].Item2);
                     Buttons.Remove(_button.Data.CustomId);
                 }
+                else
+                {
+                    XPModule.XpStorage.User user = xPModule.xpSystem!.GetUser(_button.User.Id);
+                    switch(_button.Data.CustomId)
+                    {
+                        case "next-button":
+                           
+                            await user.pageEmbed!.NextPage();
+                            await _button.DeferAsync();
+                            break;
+                        
+                        case "back-button":
+                            await user.pageEmbed!.PreviousPage();
+                            await _button.DeferAsync();
+                            break;
+                        
+                        default:
+                            break;
+                            
+                    }
+                }
             };
 
             ///Init all moduels
-            await new XPModule(this).InitilizeModule();
-
+            
             ///Fully connected
             Client.Connected += async () =>
             {
@@ -66,7 +90,7 @@ namespace TableTopBot
             };
 
             ///run bot
-            await Client.LoginAsync(TokenType.Bot, PrivateVariables.KEY);
+            await Client.LoginAsync(TokenType.Bot, PrivateVariables!.KEY);
             await Client.StartAsync();
             await Client.SetGameAsync("Getting The Cart Out");
             while (!acceptingCommands) 
@@ -331,7 +355,7 @@ namespace TableTopBot
         ///Adds a command to the current guild
         public async Task AddCommand(Command _command)
         {
-            try  { Callbacks.Add((await Client.GetGuild(1047337930965909646).CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.GetCallback()); }
+            try  { Callbacks.Add((await Client.GetGuild(PrivateVariables!.Server).CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.GetCallback()); }
             catch (Exception ex) { Debug.WriteLine(ex); }
         }
         ///Represents a full command with confirmation support
@@ -378,5 +402,14 @@ namespace TableTopBot
 
         ///Adds all events to the client
         public abstract Task InitilizeModule();
+    }
+    
+    internal class PrivateVariable 
+    {
+        public string? KEY {get;set;}   
+        public ulong Server {get;set;}
+        public ulong LogChannel {get;set;}
+        public ulong AnnouncementChannel {get;set;}
+        public ulong CommandChannel {get;set;}
     }
 }

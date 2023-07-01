@@ -1,0 +1,21 @@
+[
+  {
+    "DiscordId": 281931858713903106,
+    "PID": "P101059144",
+    "GamesPlayed": [
+      {
+        "Name": "fefefe",
+        "Id": 0,
+        "Type": 1,
+        "PlayerCount": 12,
+        "Rank": 11,
+        "GameLength": 144
+      }
+    ],
+    "WonRaffle": false,
+    "AchievementsClaimed": [
+      "test1"
+    ],
+    "NumberGamesPlayed": 1
+  }
+]
