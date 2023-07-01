@@ -1,9 +1,9 @@
-﻿using Discord;
+﻿using System.Text.Json;
+using Discord;
 using Discord.Interactions;
 using Discord.Rest;
 using Discord.WebSocket;
 using System.Diagnostics;
-using System.Text.Json;
 namespace TableTopBot
 {
     internal class Program
