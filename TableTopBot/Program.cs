@@ -67,12 +67,12 @@ namespace TableTopBot
                     {
                         case "next-button":
                            
-                            await user.pageEmbed!.NextPage();
+                            await user.PageEmbed!.NextPage();
                             await _button.DeferAsync();
                             break;
                         
                         case "back-button":
-                            await user.pageEmbed!.PreviousPage();
+                            await user.PageEmbed!.PreviousPage();
                             await _button.DeferAsync();
                             break;
                         

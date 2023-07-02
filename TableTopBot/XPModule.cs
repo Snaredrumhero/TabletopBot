@@ -30,14 +30,16 @@ namespace TableTopBot
                 public readonly string Pid;                         ///The user's Ohio University ID
                 public bool IsRaffleWinner;                         ///If the user has won a raffle prize
                 private ushort NumberGamesPlayed;                   ///only used for tracking game ids
-                public MultiPageEmbed? pageEmbed;                   ///Used to create embed pages for user's games and achievements
+                public MultiPageEmbed? PageEmbed;                   ///Used to create embed pages for user's games and achievements
                 public int BoughtTickets;                           ///Tickets that are bought with the user's points
+                public DateTime StartTime;
+                public TimeSpan CurrentTime => DateTime.Now - StartTime;
                 
                 ///Tells the current points a user has by using the maximum points and the tickets bought by the user
                 public int CurrentPoints() { return TotalPoints() - (BoughtTickets * TicketPrice); } 
             
                 ///Constructor
-                public User(SocketUser user, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, int tickets = 0)
+                public User(SocketUser user, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, int tickets = 0, DateTime startTime = new DateTime())
                 {
                     DiscordUser = user;
                     Pid = pid;
@@ -46,8 +48,9 @@ namespace TableTopBot
                     NumberGamesPlayed = numberGamesPlayed;
                     _achievementsClaimed = achievements ?? new List<string>();
                     BoughtTickets = tickets;
+                    StartTime = startTime;
                 }
-                private User(ulong id, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, int tickets = 0) : this(Program.Server().GetUser(id), pid, gamesPlayed, isRaffleWinner, numberGamesPlayed, achievements, tickets) { }
+                private User(ulong id, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, int tickets = 0, DateTime startTime = new DateTime()) : this(Program.Server().GetUser(id), pid, gamesPlayed, isRaffleWinner, numberGamesPlayed, achievements, tickets, startTime) { }
 
                 ///Mutators
                 ///Rank = 1 for win 2 for loss in an unranked game
@@ -69,7 +72,7 @@ namespace TableTopBot
                 public List<Game> GamesPlayed { get { return _gamesPlayed; } }
                 public List<Achievement> Achievements => DefaultAchievements.Where(achievement => _achievementsClaimed.Contains(achievement.Data.Name)).ToList();
                 public int TotalPoints() { return _gamesPlayed.Select(game => game.XpValue).Sum() + Achievements.Select(achievement => achievement.Data.XpValue).Sum(); }
-                public override string ToString() { return $"{DiscordUser.Username}\nPID: {Pid}\nPoints: {CurrentPoints()}\nClaimed Raffle: {IsRaffleWinner}\nBought Tickets: {BoughtTickets}"; }
+                public override string ToString() { return $"{DiscordUser.Username}\nPID: {Pid}\nPoints: {CurrentPoints()}\nClaimed Raffle: {IsRaffleWinner}\nBought Tickets: {BoughtTickets}\nTime Played: {Math.Round(CurrentTime.TotalMinutes,2)} Minutes\nGames Played: {_gamesPlayed.Count}"; }
                 public List<EmbedBuilder> ShowGames(int list_games = Int32.MinValue)
                 {
                     List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
@@ -142,8 +145,8 @@ namespace TableTopBot
                 ///Operators
                 public static bool operator >(User a, User b) => a.TotalPoints() > b.TotalPoints();
                 public static bool operator <(User a, User b) => a.TotalPoints() < b.TotalPoints();
-                public static implicit operator UserData(User u) => new UserData(u.DiscordUser.Id, u.Pid, u.GamesPlayed.Select(g => (GameData)g).ToArray(), u.IsRaffleWinner, u._achievementsClaimed.ToArray(), u.NumberGamesPlayed, u.BoughtTickets);
-                public static implicit operator User(UserData u) => new User(u.DiscordId, u.PID, u.GamesPlayed.Select(g => (Game)g).ToList(), u.WonRaffle, u.NumberGamesPlayed, u.AchievementsClaimed.ToList());
+                public static implicit operator UserData(User u) => new UserData(u.DiscordUser.Id, u.Pid, u.GamesPlayed.Select(g => (GameData)g).ToArray(), u.IsRaffleWinner, u._achievementsClaimed.ToArray(), u.NumberGamesPlayed, u.BoughtTickets, u.StartTime);
+                public static implicit operator User(UserData u) => new User(u.DiscordId, u.PID, u.GamesPlayed.Select(g => (Game)g).ToList(), u.WonRaffle, u.NumberGamesPlayed, u.AchievementsClaimed.ToList(), u.Tickets, u.Start);
             }
             public struct UserData
             {
@@ -154,8 +157,9 @@ namespace TableTopBot
                 public String[] AchievementsClaimed;
                 public ushort NumberGamesPlayed;
                 public int Tickets;
+                public DateTime Start;
 
-                public UserData(ulong discordId, string pID, GameData[] gamesPlayed, bool wonRaffle, string[] achievementsClaimed, ushort numberGamesPlayed, int tickets)
+                public UserData(ulong discordId, string pID, GameData[] gamesPlayed, bool wonRaffle, string[] achievementsClaimed, ushort numberGamesPlayed, int tickets, DateTime start)
                 {
                     DiscordId = discordId;
                     PID = pID;
@@ -164,6 +168,7 @@ namespace TableTopBot
                     AchievementsClaimed = achievementsClaimed;
                     NumberGamesPlayed = numberGamesPlayed;
                     Tickets = tickets;
+                    Start = start;
                 }
             }
 
@@ -332,7 +337,7 @@ namespace TableTopBot
                 {
                     if (Users.Any(user => user.DiscordUser.Id == addedUser.Id))
                         throw new InvalidDataException(message: "User is already registered.");
-                    Users.Add(new User(addedUser, pid));
+                    Users.Add(new User(addedUser, pid, startTime: DateTime.Now));
                 }
                 catch { throw; }
             }
@@ -353,12 +358,33 @@ namespace TableTopBot
                     Random r = new(DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond);
                     User winner = raffleEntries[r.Next(raffleEntries.Count)];
                     winner.IsRaffleWinner = true;
-
+                    
                     return winner.DiscordUser;
                 }
                 catch (IndexOutOfRangeException) { throw; }
                 catch { throw new Exception("Error in processing raffle"); }
 
+            }
+            
+            //Lists all players and statistics
+            public string DisplayAll()
+            {
+                
+                string displayAll = "List of all players: \n\n";
+                double averageTime = 0;
+                int averageGames = 0;
+                int averageXP = 0;
+                int totalUsers = Users.Count;
+                foreach(User u in Users)
+                {
+                    displayAll += $"{u.ToString()}\n";
+                    averageTime += u.CurrentTime.TotalMinutes;
+                    averageGames += u.GamesPlayed.Count;
+                    averageXP += u.TotalPoints();
+                }
+                displayAll += $"\nStatistics:\n\nAverage Time Spent: {Math.Round(averageTime/totalUsers,2)} Minutes\nAverage Number of Games Played: {averageGames/totalUsers}\nAverage Amount of XP Earned: {averageXP/totalUsers}\nTotal Attendees: {totalUsers}";
+                
+                return displayAll;
             }
 
             ///Private Functions
@@ -456,10 +482,12 @@ namespace TableTopBot
                         ///Logs the end of all day message
                         //*note* could display overall statistics for the all-day as well
                         await AnnouncementChannel().SendMessageAsync(text: $"@everyone Thank you all for participating in {xpSystem.EventName}!\nWe hope you all had fun, here are the results: {temp} \nOnce again thank you all for showing up and we hope to see you at our next event!");
-
+                        
+                        await AnnouncementChannel().SendMessageAsync(text: xpSystem.DisplayAll());
                         ///Saves changes
                         await xpSystem.Save();
 
+                        xpSystem = null;
                         ///User Feedback
                         await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully ended the event."; });
                     },
@@ -963,10 +991,10 @@ namespace TableTopBot
                             List<EmbedBuilder> gamelist = user.ShowGames();
                             
                             ///Sets up MultiPageEmbed
-                            user.pageEmbed = new MultiPageEmbed(gamelist);
+                            user.PageEmbed = new MultiPageEmbed(gamelist);
                             
                             ///Display's games
-                            await user.pageEmbed.StartPage(_command);
+                            await user.PageEmbed.StartPage(_command);
                         }
                         catch { throw; }
                     },
@@ -1101,8 +1129,8 @@ namespace TableTopBot
                             //     embed.AddField($"Achievement {i}", achievementlist[i]);
 
                             // await _command.RespondAsync(embed: achievementlist[0].Build(), ephemeral: true);
-                            user.pageEmbed = new MultiPageEmbed(achievementlist);
-                            await user.pageEmbed.StartPage(_command);
+                            user.PageEmbed = new MultiPageEmbed(achievementlist);
+                            await user.PageEmbed.StartPage(_command);
                         }
                         catch { throw; }
                     },
