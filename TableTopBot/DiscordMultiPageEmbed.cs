@@ -98,16 +98,20 @@ namespace TableTopBot
             return c;
         }
         
-        public void StartPage(SocketInteraction interaction)
+        public async Task<bool> StartPage(SocketInteraction interaction)
         {
-               if (!interaction.HasResponded)
+            if (!interaction.HasResponded)
             {
                 interaction.DeferAsync(ephemeral: true).GetAwaiter().GetResult();
             } 
-            ComponentBuilder c = GetButtons(true, false);
+            
+            
+            //bool.equal is used to check if there is more than 1 page in _pages            
+            ComponentBuilder c = GetButtons(true, bool.Equals(_pages!.Count(), 1));
 
-            _response = interaction.FollowupAsync(embed: _pages!.First().Build(), text: text, isTTS: isTts, ephemeral: ephemeral, allowedMentions: allowedMentions, 
-                components: c.Build(), options: options, embeds: null).GetAwaiter().GetResult();
+            _response = await interaction.FollowupAsync(embed: _pages!.First().Build(), text: text, isTTS: isTts, ephemeral: ephemeral, allowedMentions: allowedMentions, 
+                components: c.Build(), options: options, embeds: null);
+            return true;
         }
 
         /// <param name="interaction">

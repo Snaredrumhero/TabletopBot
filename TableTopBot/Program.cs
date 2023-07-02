@@ -12,8 +12,8 @@ namespace TableTopBot
         private static PrivateVariable? PrivateVariables = JsonSerializer.Deserialize<PrivateVariable>(File.ReadAllText("./PrivateVariables.json"));
         private static DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
         ///Channels
-        public static SocketGuild Server() => Client.GetGuild(PrivateVariables!.Server);
-        public static SocketTextChannel LogChannel() => Server().GetTextChannel(PrivateVariables!.LogChannel);
+        public static SocketGuild Server() => Client.GetGuild(PrivateVariables!.Server) ?? throw new ArgumentNullException("Error: Server not specified.");
+        public static SocketTextChannel LogChannel() => Server().GetTextChannel(PrivateVariables!.LogChannel) ?? throw new ArgumentNullException("Error: Log channel not specified.");
         
         public static Task Main(string[] args) => new Program().MainAsync();
 
@@ -59,7 +59,10 @@ namespace TableTopBot
                 }
                 else
                 {
-                    XPModule.XpStorage.User user = xPModule.xpSystem!.GetUser(_button.User.Id);
+                    if(xPModule.xpSystem == null){
+                        throw new Exception("");
+                    }
+                    XPModule.XpStorage.User user = xPModule.xpSystem.GetUser(_button.User.Id) ;
                     switch(_button.Data.CustomId)
                     {
                         case "next-button":

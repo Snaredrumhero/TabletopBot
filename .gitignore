@@ -401,5 +401,4 @@ FodyWeavers.xsd
 /TableTopBot/PrivateVariables.cs
 Ignore.txt
 token.txt
-Achievement.json
-PrivateVariables.json
+*.json

@@ -30,19 +30,24 @@ namespace TableTopBot
                 public readonly string Pid;                         ///The user's Ohio University ID
                 public bool IsRaffleWinner;                         ///If the user has won a raffle prize
                 private ushort NumberGamesPlayed;                   ///only used for tracking game ids
+                public MultiPageEmbed? pageEmbed;                   ///Used to create embed pages for user's games and achievements
+                public int BoughtTickets;                           ///Tickets that are bought with the user's points
                 
-                public MultiPageEmbed? pageEmbed;
+                ///Tells the current points a user has by using the maximum points and the tickets bought by the user
+                public int CurrentPoints() { return TotalPoints() - (BoughtTickets * TicketPrice); } 
+            
                 ///Constructor
-                public User(SocketUser user, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null)
+                public User(SocketUser user, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, int tickets = 0)
                 {
                     DiscordUser = user;
                     Pid = pid;
                     _gamesPlayed = gamesPlayed == null ? new List<Game>() : gamesPlayed;
                     IsRaffleWinner = isRaffleWinner;
                     NumberGamesPlayed = numberGamesPlayed;
-                    _achievementsClaimed = new List<string>();
+                    _achievementsClaimed = achievements ?? new List<string>();
+                    BoughtTickets = tickets;
                 }
-                private User(ulong id, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null) : this(Program.Server().GetUser(id), pid, gamesPlayed, isRaffleWinner, numberGamesPlayed, achievements) { }
+                private User(ulong id, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, int tickets = 0) : this(Program.Server().GetUser(id), pid, gamesPlayed, isRaffleWinner, numberGamesPlayed, achievements, tickets) { }
 
                 ///Mutators
                 ///Rank = 1 for win 2 for loss in an unranked game
@@ -52,6 +57,10 @@ namespace TableTopBot
                 {
                     if (!DefaultAchievements.Select(a => a.Data.Name).Contains(achievementName))
                         throw new ArgumentException("Achievement Not Found");
+                    else if(_achievementsClaimed.Select(a => a).Contains(achievementName))
+                    {
+                        throw new ArgumentException("Already Claimed Achievement");
+                    }
                     _achievementsClaimed.Add(achievementName);
                 }
                 public void UnclaimAchievement(string achievementName) => _achievementsClaimed.Remove(achievementName);
@@ -60,7 +69,7 @@ namespace TableTopBot
                 public List<Game> GamesPlayed { get { return _gamesPlayed; } }
                 public List<Achievement> Achievements => DefaultAchievements.Where(achievement => _achievementsClaimed.Contains(achievement.Data.Name)).ToList();
                 public int TotalPoints() { return _gamesPlayed.Select(game => game.XpValue).Sum() + Achievements.Select(achievement => achievement.Data.XpValue).Sum(); }
-                public override string ToString() { return $"{DiscordUser.Username}\nPID: {Pid}\nPoints: {TotalPoints()}\nClaimed Raffle: {IsRaffleWinner}"; }
+                public override string ToString() { return $"{DiscordUser.Username}\nPID: {Pid}\nPoints: {CurrentPoints()}\nClaimed Raffle: {IsRaffleWinner}\nBought Tickets: {BoughtTickets}"; }
                 public List<EmbedBuilder> ShowGames(int list_games = Int32.MinValue)
                 {
                     List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
@@ -82,7 +91,7 @@ namespace TableTopBot
                     }
                     else
                     {
-                        gamelist += _gamesPlayed.FirstOrDefault(game => game.Data.Id == list_games)!.ToString();
+                        gamelist += _gamesPlayed.FirstOrDefault(game => game.Data.Id == list_games)!.ToString() ?? throw new Exception("Cannot find game");
                         embedlist.Add(new EmbedBuilder().AddField("Found Game",gamelist));
                     }
                     //return gamelist;
@@ -133,7 +142,7 @@ namespace TableTopBot
                 ///Operators
                 public static bool operator >(User a, User b) => a.TotalPoints() > b.TotalPoints();
                 public static bool operator <(User a, User b) => a.TotalPoints() < b.TotalPoints();
-                public static implicit operator UserData(User u) => new UserData(u.DiscordUser.Id, u.Pid, u.GamesPlayed.Select(g => (GameData)g).ToArray(), u.IsRaffleWinner, u._achievementsClaimed.ToArray(), u.NumberGamesPlayed);
+                public static implicit operator UserData(User u) => new UserData(u.DiscordUser.Id, u.Pid, u.GamesPlayed.Select(g => (GameData)g).ToArray(), u.IsRaffleWinner, u._achievementsClaimed.ToArray(), u.NumberGamesPlayed, u.BoughtTickets);
                 public static implicit operator User(UserData u) => new User(u.DiscordId, u.PID, u.GamesPlayed.Select(g => (Game)g).ToList(), u.WonRaffle, u.NumberGamesPlayed, u.AchievementsClaimed.ToList());
             }
             public struct UserData
@@ -144,8 +153,9 @@ namespace TableTopBot
                 public bool WonRaffle;
                 public String[] AchievementsClaimed;
                 public ushort NumberGamesPlayed;
+                public int Tickets;
 
-                public UserData(ulong discordId, string pID, GameData[] gamesPlayed, bool wonRaffle, string[] achievementsClaimed, ushort numberGamesPlayed)
+                public UserData(ulong discordId, string pID, GameData[] gamesPlayed, bool wonRaffle, string[] achievementsClaimed, ushort numberGamesPlayed, int tickets)
                 {
                     DiscordId = discordId;
                     PID = pID;
@@ -153,6 +163,7 @@ namespace TableTopBot
                     WonRaffle = wonRaffle;
                     AchievementsClaimed = achievementsClaimed;
                     NumberGamesPlayed = numberGamesPlayed;
+                    Tickets = tickets;
                 }
             }
 
@@ -272,13 +283,15 @@ namespace TableTopBot
             }
 
             ///Psudo Const
-            private static readonly int[] TicketThresholds = new int[] { 0, 75, 300, 675, 1250 };
+            public static readonly int[] TicketThresholds = new int[] { 0, 75, 300, 675, 1250 };
             private static readonly List<Achievement> DefaultAchievements = (JsonSerializer.Deserialize<AchievementData[]>(File.ReadAllText("./Achievement.json")) ?? throw new NullReferenceException("No Data In Achievement File")).Select(a => (Achievement)a).ToList();
             private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions { WriteIndented = true, IncludeFields = true };
 
             ///Data
             private readonly List<User> Users;
             public readonly string EventName;
+            
+            public static readonly int TicketPrice = 1000;
 
             ///Construction
             public XpStorage(string eventName)
@@ -329,8 +342,11 @@ namespace TableTopBot
                 try
                 {
                     List<User> raffleEntries = new();
-                    foreach (User user in Users.Where(user => !user.IsRaffleWinner))
+                    foreach (User user in Users.Where(user => !user.IsRaffleWinner)){
                         raffleEntries.AddRange(TicketThresholds.Where(points => user.TotalPoints() > points).Select(_ => user));
+                        for(int i = 0; i < user.BoughtTickets; ++i)
+                            raffleEntries.Add(user);
+                    }
 
                     if (raffleEntries.Count() <= 0)
                         throw new IndexOutOfRangeException("No valid users for raffle.");
@@ -435,7 +451,7 @@ namespace TableTopBot
                         string temp = "";
                         for(int i = 0; i < 3 && i < top.Count; ++i)
                         {
-                            temp += $"\n{i+1}: {top[i].DiscordUser.Mention} - {top[i].TotalPoints()} points\n";
+                            temp += $"\n{i+1}: {top[i].DiscordUser.Mention} - {top[i].CurrentPoints()} points\n";
                         }
                         ///Logs the end of all day message
                         //*note* could display overall statistics for the all-day as well
@@ -533,7 +549,7 @@ namespace TableTopBot
                             List<XpStorage.User> top = xpSystem.GetTopXUsers(numberOfUsers);
                             string output = "";
                             for (int i = 0; i < top.Count; i++)
-                                output = string.Join(output, $"{i+1}: {top[i].DiscordUser.Username} - {top[i].TotalPoints()}");
+                                output = string.Join(output, $"{i+1}: {top[i].DiscordUser.Username} - {top[i].CurrentPoints()}");
 
                             ///Displays the leaderboard
                             await _command.RespondAsync(embed: new EmbedBuilder().AddField($"Top {top.Count} Users", output).Build(), ephemeral: true);
@@ -950,7 +966,7 @@ namespace TableTopBot
                             user.pageEmbed = new MultiPageEmbed(gamelist);
                             
                             ///Display's games
-                            user.pageEmbed.StartPage(_command);
+                            await user.pageEmbed.StartPage(_command);
                         }
                         catch { throw; }
                     },
@@ -1086,7 +1102,7 @@ namespace TableTopBot
 
                             // await _command.RespondAsync(embed: achievementlist[0].Build(), ephemeral: true);
                             user.pageEmbed = new MultiPageEmbed(achievementlist);
-                            user.pageEmbed.StartPage(_command);
+                            await user.pageEmbed.StartPage(_command);
                         }
                         catch { throw; }
                     },
@@ -1101,6 +1117,53 @@ namespace TableTopBot
                           Name = "name",
                           Type = ApplicationCommandOptionType.String,
                           Description = "name of achievement",
+                        },
+                    },
+                });
+                
+                await Bot.AddCommand(new Program.Command()
+                {
+                    name = "buy-tickets",
+                    description = "buy tickets",
+                    callback = async (SocketSlashCommand _command) =>
+                    {
+                        ///Checks if the event has started
+                        if (xpSystem == null)
+                            throw new Exception("Error: No event currently running.");
+
+                        try
+                        {
+                            ///Get the information
+                            int ticketsBought = Convert.ToInt32(_command.Data.Options.First().Value);
+                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
+                            if (user.TotalPoints() < 1250)
+                            {
+                                throw new Exception("Error: User did not reach point threshold of 1250");
+                            }
+                            else if ((ticketsBought * XpStorage.TicketPrice) > user.TotalPoints())
+                            {
+                                throw new Exception($"Error: User does not have enough points. Tickets cost {XpStorage.TicketPrice} points each.");
+                            }
+                            user.BoughtTickets += ticketsBought;
+                            
+
+                        }
+                        catch { throw; }
+
+                        ///Saves changes
+                        await xpSystem.Save();
+
+                        ///User Feedback
+                        //await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed game."; });
+                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = $"Successfully bought {_command.Data.Options.First().Value} tickets."; });
+                    },
+                    requiresConfirmation = true,
+                    options = new List<SlashCommandOptionBuilder>() {
+                        new SlashCommandOptionBuilder(){
+                            Name = "tickets",
+                            Type = ApplicationCommandOptionType.Integer,
+                            Description = "the number of tickets to be bought",
+                            IsRequired = true,
                         },
                     },
                 });
