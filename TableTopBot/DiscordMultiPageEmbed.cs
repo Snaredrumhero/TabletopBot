@@ -15,6 +15,8 @@ namespace TableTopBot
         bool ephemeral;
         AllowedMentions allowedMentions;
         RequestOptions options;
+        string nextButton;
+        string backButton;
 
         public int PageNumber
         {
@@ -37,8 +39,8 @@ namespace TableTopBot
             
             await _response!.ModifyAsync(z =>
             {
-                z.Embeds = new Optional<Embed[]>(new[] { builder.Build() });
-                z.Components = new Optional<MessageComponent>(GetButtons(PageNumber == 0, IsLastPage).Build());
+                z.Embeds = new Optional<Embed[]>(new[] { builder.WithCurrentTimestamp().Build() });
+                z.Components = new Optional<MessageComponent>(GetButtons(PageNumber == 0, IsLastPage, backButton, nextButton).Build());
             });
             
             return true;
@@ -90,11 +92,11 @@ namespace TableTopBot
 
         private readonly Func<int, EmbedBuilder>? _customGetPage;
 
-        private static ComponentBuilder GetButtons(bool isBackDisabled, bool isNextDisabled)
+        private static ComponentBuilder GetButtons(bool isBackDisabled, bool isNextDisabled, string back, string next)
         {
             ComponentBuilder c = new();
-            c.WithButton(ButtonBuilder.CreatePrimaryButton("Previous Page", "back-button").WithDisabled(isBackDisabled));
-            c.WithButton(ButtonBuilder.CreatePrimaryButton("Next Page", "next-button").WithDisabled(isNextDisabled));
+            c.WithButton(ButtonBuilder.CreatePrimaryButton("Previous Page", back).WithDisabled(isBackDisabled));
+            c.WithButton(ButtonBuilder.CreatePrimaryButton("Next Page", next).WithDisabled(isNextDisabled));
             return c;
         }
         
@@ -107,9 +109,9 @@ namespace TableTopBot
             
             
             //bool.equal is used to check if there is more than 1 page in _pages            
-            ComponentBuilder c = GetButtons(true, bool.Equals(_pages!.Count(), 1));
+            ComponentBuilder c = GetButtons(true, bool.Equals(_pages!.Count(), 1), backButton, nextButton);
 
-            _response = await interaction.FollowupAsync(embed: _pages!.First().Build(), text: text, isTTS: isTts, ephemeral: ephemeral, allowedMentions: allowedMentions, 
+            _response = await interaction.FollowupAsync(embed: _pages!.First().WithCurrentTimestamp().Build(), text: text, isTTS: isTts, ephemeral: ephemeral, allowedMentions: allowedMentions, 
                 components: c.Build(), options: options, embeds: null);
             return true;
         }
@@ -125,16 +127,22 @@ namespace TableTopBot
         /// <param name="ephemeral">True if only the user who triggered the interaction can see the followup, false otherwise</param>
         /// <param name="allowedMentions">The allowed mentions for the followup</param>
         /// <param name="options">The request options for the followup</param>
+        /// <param name="BackButton">The id of the back button</param>
+        /// <param name="NextButton">The id of the next button</param>
         public MultiPageEmbed(IEnumerable<EmbedBuilder> pages, string? Text = null, bool IsTts = false,
-            bool Ephemeral = false, AllowedMentions? AllowedMentions = null, RequestOptions? Options = null)
+            bool Ephemeral = false, AllowedMentions? AllowedMentions = null, RequestOptions? Options = null, 
+            string BackButton = "back-button", string NextButton = "next-button")
         {
-            
             _pages = pages.ToArray();
-
             if (_pages.Length== 0)
             {
                 throw new InvalidOperationException("Pages must contain at least one item");
             }
+            for(int i = 0; i < _pages.Count(); ++i)
+            {
+                _pages[i].WithFooter($"Page {i+1}/{_pages.Count()}");
+            }
+            
             _customGetPage = null;
             text = Text!;
             isTts = IsTts;
@@ -142,6 +150,8 @@ namespace TableTopBot
             allowedMentions = AllowedMentions!;
             options = Options!;
             PageNumber = 0;
+            backButton = BackButton;
+            nextButton = NextButton;
         }
 
         /// <param name="interaction">
@@ -156,7 +166,8 @@ namespace TableTopBot
         /// <param name="allowedMentions">The allowed mentions for the followup</param>
         /// <param name="options">The request options for the followup</param>
         public MultiPageEmbed(Func<int, EmbedBuilder> getPageFunction, string? Text = null, bool IsTts = false,
-            bool Ephemeral = false, AllowedMentions? AllowedMentions = null, RequestOptions? Options = null)
+            bool Ephemeral = false, AllowedMentions? AllowedMentions = null, RequestOptions? Options = null,
+            string BackButton = "back-button", string NextButton = "next-button")
         {
 
             _pages = null;
@@ -168,6 +179,8 @@ namespace TableTopBot
             ephemeral = Ephemeral;
             allowedMentions = AllowedMentions!;
             options = Options!;
+            nextButton = NextButton;
+            backButton = BackButton;
         }
     }
 }

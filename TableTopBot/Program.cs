@@ -75,7 +75,7 @@ namespace TableTopBot
                             await user.PageEmbed!.PreviousPage();
                             await _button.DeferAsync();
                             break;
-                        
+                            
                         default:
                             break;
                             
@@ -345,7 +345,7 @@ namespace TableTopBot
         {
             Console.Write(">");
             string? input = Console.ReadLine();
-            while(input == null || input != "Quit") {
+            while(input == null || input.ToLower() != "quit") {
                 Console.Write("Command not recognized\n>");
                 input = Console.ReadLine(); 
             }

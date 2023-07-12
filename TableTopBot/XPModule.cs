@@ -7,7 +7,144 @@ namespace TableTopBot
     internal class XPModule : Module
     {
         public enum GameType { Ranked = 1, CoOp = 2, Teams = 3, Party = 4 } ///Represents the types of games
-
+        static Func<List<Tuple<String,EmbedBuilder>>> HelpListExpandedBuilder = () =>
+        {
+            List<Tuple<String,EmbedBuilder>> g = new List<Tuple<String,EmbedBuilder>>();
+            
+            g.Add(new Tuple<string, EmbedBuilder>("join-event", new EmbedBuilder().WithTitle("Player Commands").AddField("**join-event**",
+            "Adds you to the currently running event, allowing you to earn points and participate in raffles."
+            + "\n\n__Parameters__\n- pid: Personal Identification Number assigned to Ohio University students"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("leave-event", new EmbedBuilder().WithTitle("Player Commands").AddField("**leave-event**",
+            "Takes you out of the event and deletes your data from the event."
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("see-self", new EmbedBuilder().WithTitle("Player Commands").AddField("**see-self**",
+            "Look at your PID, number of points earned, number of tickets bought, time played, games played, and raffle earnings."
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("add-game", new EmbedBuilder().WithTitle("Player Commands").AddField("**add-game**",
+            "Adds a game to your profile and calculate points based on game type, time spent, rank, and number of players."
+            + "\n\n__Parameters__\n- name: Name of the game that was played\n- player-count: How many players were playing in the game"
+            + "\n- type: The type of game that was played\n> __*ranked*__: Each player plays against each other\n> __*coop*__: All players are working together\n> __*teams*__: Players split up into groups and compete against each other\n> __*party*__: Player join in a casual and fun game"
+            + "\n- placing: Your ranking/placing in the game (if team-based, consider all members as having the same rank unless otherwise noted by the game)\n- time: How long you have played the current game for"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("remove-game", new EmbedBuilder().WithTitle("Player Commands").AddField("remove-game",
+            "Removes a specified game from your profile based on their id and makes adjustments to your profile as needed."
+            + "\n\n__Parameters__\n- id: The id number of the game to be removed from your profile\n(Note: You can find the id of the game to remove by using the see-games command)"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("see-games", new EmbedBuilder().WithTitle("Player Commands").AddField("see-games",
+            "Lists all of the games you have played, displaying each game's id, points, game type, player count, personal ranking, and game length."
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("add-achievement", new EmbedBuilder().WithTitle("Player Commands").AddField("add-achievement",
+            "Adds an achievement from the list of available achievements to your profile based on the name given."
+            + "\n\n__Parameters__\n- name: The name of the achievement to add to your profile]\n(Note: You may find all available achievements by using the see-achievements command)"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("remove-achievement", new EmbedBuilder().WithTitle("Player Commands").AddField("remove-achievement",
+            "Unclaims an achievment from your profile and adjusts your profile accordingly."
+            + "\n\n__Parameters__\n- name: The name of the achievement to remove from your profile\n(Note: You may find all claimed achievements by using the see-achievements command)"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("see-achievements", new EmbedBuilder().WithTitle("Player Commands").AddField("see-achievements",
+            "Either displays all possible achievements that are active in the event, displays all achievements you have earned at that point, or display a single achievement based on the user's input."
+            + "\n\n__Parameters__\n- show-all: True will return all achievements listed in the event, false will either display all claimed achievements or a specific achievement\n(Note: Will automatically display all achievements if no input is given) \n- name: the name of the achievement to display\n(Note: Will override show-all if an input is given)"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("buy-tickets", new EmbedBuilder().WithTitle("Player Commands").AddField("buy-tickets",
+            "Adds the specified number tickets to your profile and will calculate points as needed. Will not add tickets if required number of points is too low.\n(Note: Points used to purchase tickets WILL decrease your scoring)"
+            + "\n\n__Parameters__\n- tickets: Number of tickets to add to your account. Will not work if you do not have enough points to purchase tickets"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("show-x-users", new EmbedBuilder().WithTitle("Player Commands").AddField("show-x-users",
+            "Displays the top specified number of event attendees that are ranking based on the number of points they currently have\n(Note: Points used to purchase tickets WILL decrease your scoring)"
+            + "\n\n__Parameters__\n- number: The number of users to display based on their points ranking in the event"
+            )));
+            
+            
+            
+            
+            g.Add(new Tuple<string, EmbedBuilder>("start-event", new EmbedBuilder().WithTitle("Admin Commands").AddField("start-event",
+            "Creates a new or existing event based on the name given. It will run the event to which event attendees can now use the bot."
+            + "\n\n__Parameters__\n- event-name: Name of the event that will be run. Running the exact name of an already created event will rerun the event"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("end-event", new EmbedBuilder().WithTitle("Admin Commands").AddField("end-event",
+            "Will end a running event, removing commands from the event attendees as well as displaying the top 3 players and general statistics."
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("draw-raffle",new EmbedBuilder().WithTitle("Admin Commands").AddField("draw-raffle",
+            "Takes each user in the event and creates a raffle. Additional tickets that a user has will increase their chances of winning."
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("see-player", new EmbedBuilder().WithTitle("Admin Commands").AddField("see-player",
+            "Checks a user's profile, listing their points, games played, time spent in the event, and other statistics."
+            + "\n\n__Parameters__\n- player: User to look through and see all statistics about them"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("see-player-games", new EmbedBuilder().WithTitle("Admin Commands").AddField("see-player-games",
+            "Checks a user's completed games, listing all statistics associated with each game."
+            + "\n\n__Parameters__\n- player: User to view their completed games"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("see-player-achievements", new EmbedBuilder().WithTitle("Admin Commands").AddField("see-player-achievements",
+            "Checks all achievements claimed by a user."
+            + "\n\n__Parameters__\n- player: User to view their claimed achievements"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("remove-player", new EmbedBuilder().WithTitle("Admin Commands").AddField("remove-player",
+            "Takes out a user's profile that is currently in the event, removing all data they had."
+            + "\n\n__Parameters__\n- player: User to remove from the event"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("remove-player-game", new EmbedBuilder().WithTitle("Admin Commands").AddField("remove-player-game",
+            "Takes out a user's game from their profile and adjusts their profile accordingly."
+            + "\n\n__Parameters__\n- player: User that will have one of their games removed\n- id: the id of the user's game to be removed"
+            )));
+            
+            g.Add(new Tuple<string, EmbedBuilder>("remove-player-achievement", new EmbedBuilder().WithTitle("Admin Commands").AddField("remove-player-achievement",
+            "Unclaims a user's achievement from their profile and adjusts their profile accordingly."
+            + "\n\n__Parameters__\n- player: User that will have one of their achievements unclaimed\n- name: the name of the user's achievement to be unclaimed"
+            )));
+            
+            return g;
+        };
+        
+        static Func<EmbedBuilder> HelpListBuilder = () =>
+        {       
+            EmbedBuilder g = new EmbedBuilder().WithTitle("**All Commands**").AddField("__**Player Commands**__",
+                "- **join-event**\n> registers you for the current event\n"
+                + "\n- **leave-event**\n> unregisters you for the current event\n"
+                + "\n- **see-self**\n> shows you your stats\n"
+                + "\n- **add-game**\n> adds a game to your profile\n"
+                + "\n- **remove-game**\n> removes a game from your profile\n"
+                + "\n- **see-games**\n> shows your completed games\n"
+                + "\n- **add-achievement**\n> adds an achievement to your profile\n"
+                + "\n- **remove-achievement**\n> removes an achievement from your profile\n"
+                + "\n- **see-achievements**\n> shows achievements you have completed or all available achievements\n"
+                + "\n- **buy-tickets**\n> buy tickets and add them to your profile\n"
+                + "\n- **show-x-users**\n> shows a leaderboard of top x users\n", false)
+                
+                .AddField("__**Admin Commands**__",
+                "- **start-event**\n> starts the all-day event\n"
+                + "\n- **end-event**\n> ends the all-day event\n"
+                + "\n- **draw-raffle**\n> draws araffle ticket\n"
+                + "\n- **see-player**\n> views a player's profile\n"
+                + "\n- **see-player-games**\n> views a player's completed games\n"
+                + "\n- **see-player-achievements**\n> views a player's claimed achievements\n"
+                + "\n- **remove-player**\n> removes a player's profile\n"
+                + "\n- **remove-player-game**\n> removes a game from a player's profile\n"
+                + "\n- **remove-player-achievement**\n> removes an achievement from a player's profile\n", false
+            ); 
+            
+            return g;
+            
+        };
+        
         ///Sub Classes
         /**
          * XpStorage
@@ -23,17 +160,17 @@ namespace TableTopBot
             public class User
             {
                 ///Variables
-                private readonly List<string> _achievementsClaimed; ///The list of all possible achievements a user can get
-                private readonly List<Game> _gamesPlayed;           ///The games the user has played in
-
-                public SocketUser DiscordUser;                      ///The user's discord
-                public readonly string Pid;                         ///The user's Ohio University ID
-                public bool IsRaffleWinner;                         ///If the user has won a raffle prize
-                private ushort NumberGamesPlayed;                   ///only used for tracking game ids
-                public MultiPageEmbed? PageEmbed;                   ///Used to create embed pages for user's games and achievements
-                public int BoughtTickets;                           ///Tickets that are bought with the user's points
-                public DateTime StartTime;
-                public TimeSpan CurrentTime => DateTime.Now - StartTime;
+                private readonly List<string> _achievementsClaimed;         ///The list of all possible achievements a user can get
+                private readonly List<Game> _gamesPlayed;                   ///The games the user has played in
+                public SocketUser DiscordUser;                              ///The user's discord
+                public readonly string Pid;                                 ///The user's Ohio University ID
+                public bool IsRaffleWinner;                                 ///If the user has won a raffle prize
+                private ushort NumberGamesPlayed;                           ///only used for tracking game ids
+                public MultiPageEmbed? PageEmbed;                           ///Used to create embed pages for user's games and achievements
+                public int BoughtTickets;                                   ///Tickets that are bought with the user's points
+                public DateTime StartTime;                                  ///The time that they have logged into the event
+                public TimeSpan CurrentTime => DateTime.Now - StartTime;    ///The total time a user has spent in the event 
+                
                 
                 ///Tells the current points a user has by using the maximum points and the tickets bought by the user
                 public int CurrentPoints() { return TotalPoints() - (BoughtTickets * TicketPrice); } 
@@ -72,30 +209,30 @@ namespace TableTopBot
                 public List<Game> GamesPlayed { get { return _gamesPlayed; } }
                 public List<Achievement> Achievements => DefaultAchievements.Where(achievement => _achievementsClaimed.Contains(achievement.Data.Name)).ToList();
                 public int TotalPoints() { return _gamesPlayed.Select(game => game.XpValue).Sum() + Achievements.Select(achievement => achievement.Data.XpValue).Sum(); }
-                public override string ToString() { return $"{DiscordUser.Username}\nPID: {Pid}\nPoints: {CurrentPoints()}\nClaimed Raffle: {IsRaffleWinner}\nBought Tickets: {BoughtTickets}\nTime Played: {Math.Round(CurrentTime.TotalMinutes,2)} Minutes\nGames Played: {_gamesPlayed.Count}"; }
+                public override string ToString() { return $"__**{DiscordUser.Username}**__\n- PID: {Pid}\n- Points: {CurrentPoints()}\n- Claimed Raffle: {IsRaffleWinner}\n- Bought Tickets: {BoughtTickets}\n- Time Played: {Math.Round(CurrentTime.TotalMinutes,2)} Minutes\n- Games Played: {_gamesPlayed.Count}"; }
                 public List<EmbedBuilder> ShowGames(int list_games = Int32.MinValue)
                 {
                     List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
                     string gamelist = "";
-
                     if (list_games == Int32.MinValue)
                     {
+                        int totalPages = _gamesPlayed.Count()/5 + (_gamesPlayed.Count%5 == 0 ? 0:1);
                         for (int i = 0; i < _gamesPlayed.Count(); ++i)
                         {
                             gamelist += (_gamesPlayed[i].ToString() + "\n\n");
                             if ((i + 1) % 5 == 0)
                             {
-                                embedlist.Add(new EmbedBuilder().AddField("Your Games",gamelist));
+                                embedlist.Add(new EmbedBuilder().WithColor(Color.Blue).WithTitle("Your Games").WithDescription(gamelist));
                                 gamelist = "";
                             }
                         }
                         if (!string.IsNullOrEmpty(gamelist))
-                            embedlist.Add(new EmbedBuilder().AddField("Your Games",gamelist));
+                            embedlist.Add(new EmbedBuilder().WithColor(Color.Blue).WithTitle("Your Games").WithDescription(gamelist));
                     }
                     else
                     {
                         gamelist += _gamesPlayed.FirstOrDefault(game => game.Data.Id == list_games)!.ToString() ?? throw new Exception("Cannot find game");
-                        embedlist.Add(new EmbedBuilder().AddField("Found Game",gamelist));
+                        embedlist.Add(new EmbedBuilder().WithColor(Color.Blue).WithFooter("Page 1/1").WithCurrentTimestamp().WithTitle("Found Game").WithDescription(gamelist));
                     }
                     //return gamelist;
                     return embedlist;
@@ -105,40 +242,45 @@ namespace TableTopBot
                     List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
                     string achievementlist = "";
 
-                    if (showAll)
+                    if(String.IsNullOrEmpty(name))
                     {
-                        for (int i = 0; i < DefaultAchievements.Count; ++i)
+                        if(showAll)
                         {
-                            achievementlist += $"{DefaultAchievements[i]}\nClaimed: {_achievementsClaimed.Contains(DefaultAchievements[i].Data.Name)}\n\n";
-                            if ((i + 1) % 5 == 0)
+                            int totalPages = DefaultAchievements.Count/5 + (DefaultAchievements.Count%5 == 0 ? 0:1);
+                            for (int i = 0; i < DefaultAchievements.Count; ++i)
                             {
-                                embedlist.Add((new EmbedBuilder().AddField("List of Achievements", achievementlist)));
-                                achievementlist = "";
+                                achievementlist += $"{DefaultAchievements[i]}\nClaimed: {_achievementsClaimed.Contains(DefaultAchievements[i].Data.Name)}\n\n";
+                                if ((i + 1) % 5 == 0)
+                                {
+                                    embedlist.Add((new EmbedBuilder().WithColor(Color.Blue).WithTitle("List of Achievements").WithDescription(achievementlist)));
+                                    achievementlist = "";
+                                }
                             }
+                            if (!string.IsNullOrEmpty(achievementlist))
+                                embedlist.Add(new EmbedBuilder().WithColor(Color.Blue).WithTitle("List of Achievements").WithDescription(achievementlist)); 
                         }
-                        if (!string.IsNullOrEmpty(achievementlist))
-                            embedlist.Add(new EmbedBuilder().AddField("List of Achievements",achievementlist));
-
-                    }
-                    else if (string.IsNullOrEmpty(name))
-                    {
-                        for (int i = 0; i < Achievements.Count; ++i)
+                        else
                         {
-                            achievementlist += $"{Achievements[i]}\n\n";
-                            if ((i + 1) % 5 == 0)
+                            int totalPages = Achievements.Count/5 + (Achievements.Count%5 == 0 ? 0:1);
+                            for (int i = 0; i < Achievements.Count; ++i)
                             {
-                                embedlist.Add((new EmbedBuilder().AddField("Your Achievements", achievementlist)));
-                                achievementlist = "";
+                                achievementlist += $"{Achievements[i]}\n\n";
+                                if ((i + 1) % 5 == 0)
+                                {
+                                    embedlist.Add((new EmbedBuilder().WithColor(Color.Blue).WithTitle("Your Achievements").WithDescription(achievementlist)));
+                                    achievementlist = "";
+                                }
                             }
+                            if (!string.IsNullOrEmpty(achievementlist))
+                                embedlist.Add((new EmbedBuilder().WithColor(Color.Blue).WithTitle("Your Achievements").WithDescription(achievementlist)));
                         }
-                        if (!string.IsNullOrEmpty(achievementlist))
-                            embedlist.Add((new EmbedBuilder().AddField("Your Achievements", achievementlist)));
                     }
                     else
                     {
                         achievementlist += Achievements.FirstOrDefault(achievement => achievement.Data.Name == name)!.ToString() ?? throw new ArgumentException("Achievement Not Found");
-                        embedlist.Add((new EmbedBuilder().AddField("Achievement Found", achievementlist)));
+                        embedlist.Add((new EmbedBuilder().WithColor(Color.Blue).WithFooter("Page 1/1").WithCurrentTimestamp().WithTitle("Achievement Found").WithDescription(achievementlist)));
                     }
+                    
                     return embedlist;
                 }
 
@@ -229,7 +371,7 @@ namespace TableTopBot
                 }
 
                 ///Accessors
-                public override string ToString() => $"Name: {Data.Name}\nID: {Data.Id}\nGame Type: {Data.Type}\nPlayer Count: {Data.PlayerCount}\nRanking: {Data.Rank}\nGame Length: {Data.GameLength} min\nPoints: {XpValue}\n";
+                public override string ToString() => $"**{Data.Name}**\n- ID: {Data.Id}\n- Game Type: {Data.Type}\n- Player Count: {Data.PlayerCount}\n- Ranking: {Data.Rank}\n- Game Length: {Data.GameLength} min\n- Points: {XpValue}\n";
 
                 ///Operators
                 public static implicit operator GameData(Game g) => g.Data;
@@ -268,7 +410,7 @@ namespace TableTopBot
                 private Achievement(AchievementData data) { Data = data; }
 
                 ///Accessors
-                public override string ToString() { return $"Name: {Data.Name}\nDescription: {Data.Description}\nPoints: {Data.XpValue}"; }
+                public override string ToString() { return $"**{Data.Name}**\n- Description: {Data.Description}\n- Points: {Data.XpValue}"; }
 
                 ///Operators
                 public static implicit operator Achievement(AchievementData a) => new Achievement(a);
@@ -393,8 +535,8 @@ namespace TableTopBot
 
         ///Variables
         private static PrivateVariable? PrivateVariables = JsonSerializer.Deserialize<PrivateVariable>(File.ReadAllText("./PrivateVariables.json"));
-        public SocketTextChannel AnnouncementChannel() => Program.Server().GetTextChannel(PrivateVariables!.AnnouncementChannel);
-        public SocketTextChannel CommandChannel() => Program.Server().GetTextChannel(PrivateVariables!.CommandChannel);
+        public static SocketTextChannel AnnouncementChannel() => Program.Server().GetTextChannel(PrivateVariables!.AnnouncementChannel);
+        public static SocketTextChannel CommandChannel() => Program.Server().GetTextChannel(PrivateVariables!.CommandChannel);
         public XpStorage? xpSystem;
         public XPModule(Program _bot) : base(_bot) { }
 
@@ -403,6 +545,69 @@ namespace TableTopBot
         {
             Bot.AddConnectedCallback(async () =>
             {
+                await Bot.AddCommand(new Program.Command()
+                {
+                    name = "help",
+                    description = "show all commands available and explain them in detail",
+                    callback = async (SocketSlashCommand _command) =>
+                    {
+                        try
+                        {
+                            
+                            SocketGuildUser user = (SocketGuildUser) _command.User;
+                            string? showCommand = null;
+                            foreach (SocketSlashCommandDataOption? option in _command.Data.Options)
+                            {
+                                if (option is null)
+                                    continue;
+                                showCommand = (string) option.Value;
+                            }
+                            
+                            if(String.IsNullOrEmpty(showCommand))
+                            {
+                                await _command.RespondAsync(embed: HelpListBuilder.Invoke().WithColor(Color.Red).Build(), ephemeral: true);
+                            }
+                            else
+                            {
+                                EmbedBuilder commandFound = HelpListExpandedBuilder.Invoke().Find(e => e.Item1 == (string) _command.Data.Options.First().Value )!.Item2 ?? throw new Exception("Command does not exist");
+                                
+                                await _command.RespondAsync(embed: commandFound.WithColor(Color.Red).Build(), ephemeral: true);
+                            }                 
+
+                        }
+                        catch { throw; }
+                    },
+                    options = new List<SlashCommandOptionBuilder>() {
+                        new SlashCommandOptionBuilder(){
+                            Name = "command",
+                            Type = ApplicationCommandOptionType.String,
+                            Description = "provide more details about given comand",
+                            IsRequired = false,
+                        }
+                            .AddChoice("join-event", "join-event")
+                            .AddChoice("leave-event", "leave-event")
+                            .AddChoice("see-self", "see-self")
+                            .AddChoice("add-game","add-game")
+                            .AddChoice("remove-game", "remove-game")
+                            .AddChoice("see-games","see-games")
+                            .AddChoice("add-achievement", "add-achievement")
+                            .AddChoice("remove-achievement", "remove-achievement")
+                            .AddChoice("see-achievements", "see-achievements")
+                            .AddChoice("buy-tickets", "buy-tickets")
+                            .AddChoice("show-x-users", "show-x-users")
+                            .AddChoice("start-event", "start-event")
+                            .AddChoice("end-event", "end-event")
+                            .AddChoice("draw-raffle", "draw-raffle")
+                            .AddChoice("see-player", "see-player")
+                            .AddChoice("see-player-games", "see-player-games")
+                            .AddChoice("see-player-achievements", "see-player-achievements")
+                            .AddChoice("remove-player", "remove-player")
+                            .AddChoice("remove-player-game", "remove-player-game")
+                            .AddChoice("remove-player-achievement", "remove-player-achievement"),
+                            
+                            
+                    },
+                });
                 /**
                  * start-event
                  * Starts the event after confirmation, takes in 
@@ -539,9 +744,11 @@ namespace TableTopBot
                         if (xpSystem == null)
                             throw new Exception("Error: No event currently running.");
 
+                        XpStorage.User user = xpSystem.GetUser( ((SocketUser) _command.Data.Options.First().Value).Id);
                         ///Responds with an ephemeral embed of the info
                         //*note* this will be ephemeral, and will show private data
-                        await _command.RespondAsync(embed: (new EmbedBuilder().AddField("Player Data", xpSystem.GetUser(((SocketUser)_command.Data.Options.First().Value).Id).ToString())).Build(), ephemeral: true);
+                        await _command.RespondAsync(embed: (new EmbedBuilder().WithTitle($"{user.DiscordUser.Username}'s Data").WithDescription(user.ToString()))
+                        .WithFooter("Page 1/1").WithColor(Color.Blue).WithCurrentTimestamp().Build(), ephemeral: true);
                     },
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>() {
@@ -553,6 +760,97 @@ namespace TableTopBot
                         },
                     }
                 });
+                
+                /**
+                 * see-player-games
+                 * show all games of a specified user
+                 */
+                await Bot.AddCommand(new Program.Command()
+                {
+                    name = "see-player-games",
+                    description = "views a player's completed games",
+                    callback = async (SocketSlashCommand _command) =>
+                    {
+                        ///Checks if the event has started
+                        if (xpSystem == null)
+                            throw new Exception("Error: No event currently running.");
+
+                        try
+                        {
+                            ///Gets users
+                            XpStorage.User user = xpSystem.GetUser(((SocketUser) _command.Data.Options.First().Value).Id);
+                            XpStorage.User adminUser = xpSystem.GetUser(_command.User.Id);
+                            
+                            ///Gets data and creates embed
+                            List<EmbedBuilder> gamelist = user.ShowGames();
+                            
+                            foreach(EmbedBuilder g in gamelist)
+                                g.WithTitle($"{user.DiscordUser.Username}'s Games");
+                            
+                            
+                            ///Sets up MultiPageEmbed
+                            adminUser.PageEmbed = new MultiPageEmbed(gamelist);
+                            
+                            ///Display's games
+                            await adminUser.PageEmbed.StartPage(_command);
+                        }
+                        catch { throw; }
+                    },
+                    modOnly = true,
+                    options = new List<SlashCommandOptionBuilder>(){
+                        new SlashCommandOptionBuilder(){
+                            Name = "player",
+                            Type = ApplicationCommandOptionType.User,
+                            Description = "the user to be checked",
+                            IsRequired = true,
+                        }
+                    }
+                });
+                
+                /**
+                 * see-player-achievements
+                 * show all achievements of a specified user
+                 */
+                await Bot.AddCommand(new Program.Command()
+                {
+                    name = "see-player-achievements",
+                    description = "views a player's claimed achievements",
+                    callback = async (SocketSlashCommand _command) =>
+                    {
+                        ///Checks if the event has started
+                        if (xpSystem == null)
+                            throw new Exception("Error: No event currently running.");
+
+                        try
+                        {
+                            ///Gets data
+                            XpStorage.User user = xpSystem.GetUser( ((SocketUser) _command.Data.Options.First().Value).Id);
+                            XpStorage.User adminUser = xpSystem.GetUser(_command.User.Id);
+                            List<EmbedBuilder> achievementlist = new List<EmbedBuilder>();
+
+                            ///Create embed
+                            achievementlist = user.ShowAchievements(showAll: false);
+                            
+                            foreach(EmbedBuilder g in achievementlist)
+                                g.WithTitle($"{user.DiscordUser.Username}'s Achievements");
+                                
+                            ///Display achievements
+                            adminUser.PageEmbed = new MultiPageEmbed(achievementlist);
+                            await adminUser.PageEmbed.StartPage(_command);
+                        }
+                        catch { throw; }
+                    },
+                    modOnly = true,
+                    options = new List<SlashCommandOptionBuilder>(){
+                        new SlashCommandOptionBuilder(){
+                            Name = "player",
+                            Type = ApplicationCommandOptionType.User,
+                            Description = "the user to be checked",
+                            IsRequired = true,
+                        }
+                    }
+                });
+                
                 /**
                  * show-x-users
                  * shows an ephemeral leaderboard of the top x 
@@ -561,7 +859,7 @@ namespace TableTopBot
                 await Bot.AddCommand(new Program.Command()
                 {
                     name = "show-x-users",
-                    description = "shows a leaderboard to you",
+                    description = "shows a leaderboard of top x users",
                     callback = async (SocketSlashCommand _command) =>
                     {
                         ///Checks if the event has started
@@ -580,14 +878,15 @@ namespace TableTopBot
                                 output = string.Join(output, $"{i+1}: {top[i].DiscordUser.Username} - {top[i].CurrentPoints()}");
 
                             ///Displays the leaderboard
-                            await _command.RespondAsync(embed: new EmbedBuilder().AddField($"Top {top.Count} Users", output).Build(), ephemeral: true);
+                            await _command.RespondAsync(embed: new EmbedBuilder().AddField($"Top {top.Count} Users", output)
+                            .WithColor(Color.Red).WithFooter("Page 1/1").WithCurrentTimestamp().Build(), ephemeral: true);
                         }
                         catch { throw; }
                     },
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
-                            Name = "x",
+                            Name = "number",
                             Type = ApplicationCommandOptionType.Integer,
                             Description = "the number of users to see",
                             IsRequired = true,
@@ -633,7 +932,7 @@ namespace TableTopBot
                         new SlashCommandOptionBuilder(){
                             Name = "player",
                             Type = ApplicationCommandOptionType.User,
-                            Description = "the user",
+                            Description = "the user to remove a game from",
                             IsRequired = true,
                         },
                         new SlashCommandOptionBuilder(){
@@ -681,9 +980,9 @@ namespace TableTopBot
                     requiresConfirmation = true,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder() {
-                            Name = "user",
+                            Name = "player",
                             Type = ApplicationCommandOptionType.User,
-                            Description = "the user",
+                            Description = "the user to remove an achievement from",
                             IsRequired = true,
                         },
                         new SlashCommandOptionBuilder(){
@@ -836,7 +1135,8 @@ namespace TableTopBot
                         try
                         {
                             ///Shows the caller's information
-                            await _command.RespondAsync(embed: new EmbedBuilder().AddField("Your Data", xpSystem.GetUser(_command.User.Id).ToString()).Build(), ephemeral: true);
+                            await _command.RespondAsync(embed: new EmbedBuilder().WithTitle("Your Data").WithDescription(xpSystem.GetUser(_command.User.Id).ToString())
+                            .WithColor(Color.Blue).WithFooter("Page 1/1").WithCurrentTimestamp().Build(), ephemeral: true);
                         }
                         catch { throw; }
                     },
@@ -911,9 +1211,9 @@ namespace TableTopBot
                             .AddChoice("Party", "party")
                         ,
                         new SlashCommandOptionBuilder(){
-                            Name = "rank",
+                            Name = "placing",
                             Type = ApplicationCommandOptionType.Integer,
-                            Description = "where you/your team ranked",
+                            Description = "where you or your team ranked/placed",
                             IsRequired = true,
 
                         },
@@ -1032,7 +1332,7 @@ namespace TableTopBot
                     },
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
-                            Name = "id",
+                            Name = "name",
                             Type = ApplicationCommandOptionType.String,
                             Description = "the achievement's name",
                             IsRequired = true,
@@ -1100,7 +1400,7 @@ namespace TableTopBot
                             ///Gets data
                             XpStorage.User user = xpSystem.GetUser(_command.User.Id);
                             List<EmbedBuilder> achievementlist = new List<EmbedBuilder>();
-                            bool isShowAll = false;
+                            bool isShowAll = true;
                             string? achievementName = null;
 
                             ///Get selected achievements
@@ -1124,11 +1424,6 @@ namespace TableTopBot
                             achievementlist = user.ShowAchievements(showAll: isShowAll, name: achievementName);
 
                             ///Display achievements
-                            // EmbedBuilder embed = new EmbedBuilder();
-                            // for (int i = 0; i < achievementlist.Count; ++i)
-                            //     embed.AddField($"Achievement {i}", achievementlist[i]);
-
-                            // await _command.RespondAsync(embed: achievementlist[0].Build(), ephemeral: true);
                             user.PageEmbed = new MultiPageEmbed(achievementlist);
                             await user.PageEmbed.StartPage(_command);
                         }
@@ -1139,7 +1434,6 @@ namespace TableTopBot
                             Name = "show-all",
                             Type = ApplicationCommandOptionType.Boolean,
                             Description = "True: shows all achievements | False: shows your completed achievements",
-                            IsRequired = true,
                         },
                         new SlashCommandOptionBuilder(){
                           Name = "name",
@@ -1152,7 +1446,7 @@ namespace TableTopBot
                 await Bot.AddCommand(new Program.Command()
                 {
                     name = "buy-tickets",
-                    description = "buy tickets",
+                    description = "buy tickets and add them to your profile",
                     callback = async (SocketSlashCommand _command) =>
                     {
                         ///Checks if the event has started
