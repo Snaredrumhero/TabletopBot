@@ -1,7 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Discord;
-using Discord.Rest;
-using Discord.WebSocket;
 
 namespace TableTopBot
 {
