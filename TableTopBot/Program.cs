@@ -9,12 +9,13 @@ namespace TableTopBot
     internal class Program
     {
         ///The bot's client
-        private static PrivateVariable? PrivateVariables = JsonSerializer.Deserialize<PrivateVariable>(File.ReadAllText("./PrivateVariables.json"));
+        private static Func<PrivateVariable> PrivateVariables = () => JsonSerializer.Deserialize<PrivateVariable>(File.ReadAllText("./PrivateVariables.json")) ?? throw new Exception("Error: PrivateVariables.json file not found or initialized correctly.");
         private static DiscordSocketClient Client = new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = GatewayIntents.All });
         ///Channels
-        public static SocketGuild Server() => Client.GetGuild(PrivateVariables!.Server) ?? throw new ArgumentNullException("Error: Server not specified.");
-        public static SocketTextChannel LogChannel() => Server().GetTextChannel(PrivateVariables!.LogChannel) ?? throw new ArgumentNullException("Error: Log channel not specified.");
-        
+        public static SocketGuild Server() => Client.GetGuild(PrivateVariables.Invoke()!.Server) ?? throw new ArgumentNullException("Error: Server not specified.");
+        public static SocketTextChannel LogChannel() => Server().GetTextChannel(PrivateVariables.Invoke()!.LogChannel) ?? throw new ArgumentNullException("Error: Log channel not specified.");
+        public static string? icon = null;
+        public static string? name = null;
         public static Task Main(string[] args) => new Program().MainAsync();
 
         private async Task MainAsync()
@@ -82,6 +83,61 @@ namespace TableTopBot
                     }
                 }
             };
+            Client.SelectMenuExecuted += async (SocketMessageComponent _selectMenu) =>
+            {
+                try
+                {
+                switch(_selectMenu.Data.CustomId)
+                {
+                    case "annoucement-channel":
+                        await _selectMenu.DeferAsync();
+                        
+                        PrivateVariable privateChange = PrivateVariables.Invoke()!;
+                        privateChange.AnnouncementChannel = ulong.Parse(string.Join(", ", _selectMenu.Data.Values));
+                        await File.WriteAllTextAsync("./PrivateVariables.json", JsonSerializer.Serialize(privateChange, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
+                        
+                        SelectMenuBuilder commandMenu = new SelectMenuBuilder().WithPlaceholder("List of Channels").WithCustomId("command-channel");
+                        foreach(SocketGuildChannel g in Server().TextChannels)
+                        {
+                            commandMenu.AddOption(new SelectMenuOptionBuilder(g.Name, g.Id.ToString()));
+                        }
+                        
+                        await _selectMenu.ModifyOriginalResponseAsync(m => {m.Content = "Select Command Channel"; m.Components = new ComponentBuilder().WithSelectMenu(commandMenu).Build(); });
+                        break;
+                        
+                    case "command-channel":
+                        await _selectMenu.DeferAsync(); 
+                        
+                        privateChange = PrivateVariables.Invoke()!;
+                        privateChange.CommandChannel = ulong.Parse(string.Join(", ", _selectMenu.Data.Values));
+                        await File.WriteAllTextAsync("./PrivateVariables.json", JsonSerializer.Serialize(privateChange, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
+                        
+                        
+                        SelectMenuBuilder logMenu = new SelectMenuBuilder().WithPlaceholder("List of Channels").WithCustomId("log-channel");
+                        foreach(SocketGuildChannel g in Server().TextChannels)
+                        {
+                            logMenu.AddOption(new SelectMenuOptionBuilder(g.Name, g.Id.ToString()));
+                        }
+                        await _selectMenu.ModifyOriginalResponseAsync(m => {m.Content = "Select Log Channel"; m.Components = new ComponentBuilder().WithSelectMenu(logMenu).Build(); });
+                        break;
+                        
+                    case "log-channel":
+                        await _selectMenu.DeferAsync();
+                        
+                        privateChange = PrivateVariables.Invoke()!;
+                        privateChange.LogChannel = ulong.Parse(string.Join(", ", _selectMenu.Data.Values));
+                        await File.WriteAllTextAsync("./PrivateVariables.json", JsonSerializer.Serialize(privateChange, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true }));
+                        
+                        await _selectMenu.ModifyOriginalResponseAsync(m => {m.Content = "Successfully modified System"; m.Components = null; } );
+                        break;
+                    default:
+                        throw new Exception("Invalid Menu Option");
+                }
+                }catch
+                {
+                    throw;
+                }
+            };
 
             ///Init all moduels
             
@@ -93,11 +149,13 @@ namespace TableTopBot
             };
 
             ///run bot
-            await Client.LoginAsync(TokenType.Bot, PrivateVariables!.KEY);
+            await Client.LoginAsync(TokenType.Bot, PrivateVariables.Invoke()!.KEY);
             await Client.StartAsync();
             await Client.SetGameAsync("Getting The Cart Out");
             while (!acceptingCommands) 
                 await Task.Delay(1000);
+            icon = Client.CurrentUser.GetAvatarUrl() ?? Client.CurrentUser.GetDefaultAvatarUrl();
+            name = Client.CurrentUser.Username;
             await AwaitConsoleCommands();
             await Server().DeleteApplicationCommandsAsync();
             await Client.LogoutAsync();
@@ -358,7 +416,7 @@ namespace TableTopBot
         ///Adds a command to the current guild
         public async Task AddCommand(Command _command)
         {
-            try  { Callbacks.Add((await Client.GetGuild(PrivateVariables!.Server).CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.GetCallback()); }
+            try  { Callbacks.Add((await Client.GetGuild(PrivateVariables.Invoke()!.Server).CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.GetCallback()); }
             catch (Exception ex) { Debug.WriteLine(ex); }
         }
         ///Represents a full command with confirmation support
@@ -369,6 +427,7 @@ namespace TableTopBot
             public string name = "";
             public string description = "";
             public bool modOnly = false;
+            public bool adminOnly = false;
             public bool requiresConfirmation = false;
             public Func<SocketSlashCommand, Task> callback = (SocketSlashCommand _command) => { throw new NotImplementedException(); };
             public List<SlashCommandOptionBuilder> options = new List<SlashCommandOptionBuilder>();
@@ -378,7 +437,7 @@ namespace TableTopBot
                 {
                     Name = name,
                     Description = description,
-                    DefaultMemberPermissions = modOnly ? GuildPermission.KickMembers : GuildPermission.ViewChannel,
+                    DefaultMemberPermissions = modOnly ? (adminOnly ? GuildPermission.Administrator : GuildPermission.KickMembers) : GuildPermission.ViewChannel,
                     Options = options,
                 };
             }
@@ -392,6 +451,18 @@ namespace TableTopBot
                     await _command.RespondAsync(ephemeral: true, components: cb.Build());
                 });
             }
+        }
+        
+        public static async Task SetUp(SocketSlashCommand _command)
+        {
+
+            SelectMenuBuilder menu = new SelectMenuBuilder().WithPlaceholder("List of Channels").WithCustomId("annoucement-channel");
+            foreach(SocketGuildChannel g in Server().TextChannels)
+            {
+                menu.AddOption(new SelectMenuOptionBuilder(g.Name, g.Id.ToString()));
+            }
+            await _command.RespondAsync(text: "Select Announcement Channel", components: new ComponentBuilder().WithSelectMenu(menu).Build(),ephemeral: true);
+            
         }
     }
     ///A class to be overridden to create modules
@@ -414,5 +485,14 @@ namespace TableTopBot
         public ulong LogChannel {get;set;}
         public ulong AnnouncementChannel {get;set;}
         public ulong CommandChannel {get;set;}
+        
+        public PrivateVariable(string? key, ulong server, ulong logChannel, ulong announcementChannel, ulong commandChannel)
+        {
+            KEY = key;
+            Server = server;
+            LogChannel = logChannel;
+            AnnouncementChannel = announcementChannel;
+            CommandChannel = commandChannel;
+        }
     }
 }

@@ -534,9 +534,9 @@ namespace TableTopBot
         }
 
         ///Variables
-        private static PrivateVariable? PrivateVariables = JsonSerializer.Deserialize<PrivateVariable>(File.ReadAllText("./PrivateVariables.json"));
-        public static SocketTextChannel AnnouncementChannel() => Program.Server().GetTextChannel(PrivateVariables!.AnnouncementChannel);
-        public static SocketTextChannel CommandChannel() => Program.Server().GetTextChannel(PrivateVariables!.CommandChannel);
+        private static Func<PrivateVariable?> PrivateVariables = () => JsonSerializer.Deserialize<PrivateVariable>(File.ReadAllText("./PrivateVariables.json"));
+        public static SocketTextChannel AnnouncementChannel() => Program.Server().GetTextChannel(PrivateVariables.Invoke()!.AnnouncementChannel);
+        public static SocketTextChannel CommandChannel() => Program.Server().GetTextChannel(PrivateVariables.Invoke()!.CommandChannel);
         public XpStorage? xpSystem;
         public XPModule(Program _bot) : base(_bot) { }
 
@@ -607,6 +607,25 @@ namespace TableTopBot
                             
                             
                     },
+                });
+                await Bot.AddCommand(new Program.Command()
+                {
+                    name = "set-up",
+                    description = "sets up the bot for use in the server",
+                    callback = async (SocketSlashCommand _command) =>
+                    {
+                        try
+                        {
+                            await Program.SetUp(_command);
+                        }
+                        catch
+                        {
+                            throw;
+                        }
+                    },
+                    modOnly = true,
+                    adminOnly = true,
+                    
                 });
                 /**
                  * start-event
@@ -760,7 +779,6 @@ namespace TableTopBot
                         },
                     }
                 });
-                
                 /**
                  * see-player-games
                  * show all games of a specified user
@@ -878,7 +896,7 @@ namespace TableTopBot
                                 output = string.Join(output, $"{i+1}: {top[i].DiscordUser.Username} - {top[i].CurrentPoints()}");
 
                             ///Displays the leaderboard
-                            await _command.RespondAsync(embed: new EmbedBuilder().AddField($"Top {top.Count} Users", output)
+                            await _command.RespondAsync(embed: new EmbedBuilder().WithTitle($"Top {top.Count} Users").WithDescription(output)
                             .WithColor(Color.Red).WithFooter("Page 1/1").WithCurrentTimestamp().Build(), ephemeral: true);
                         }
                         catch { throw; }
@@ -917,14 +935,14 @@ namespace TableTopBot
 
                             ///Remove the game
                             user.RemoveGame(gameId);
+                            ///Saves changes
+                            await xpSystem.Save();
+
+                            ///User Feedback
+                            await _command.ModifyOriginalResponseAsync(m => {m.Components = null; m.Embed = new EmbedBuilder().WithDescription("Successfully removed game.")
+                            .WithCurrentTimestamp().WithFooter("Page 1/1").WithColor(Color.Blue).WithImageUrl(user.DiscordUser.GetAvatarUrl()).Build(); });
                         }
                         catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed game."; });
                     },
                     modOnly = true,
                     requiresConfirmation = true,
@@ -1344,6 +1362,7 @@ namespace TableTopBot
                  * Removes an achievement from the user's profile
                  * after confirmation
                  */
+                 
                 await Bot.AddCommand(new Program.Command()
                 {
                     name = "remove-achievement",
