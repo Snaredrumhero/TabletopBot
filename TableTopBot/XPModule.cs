@@ -326,14 +326,17 @@
                     if (raffleEntries.Count() <= 0)
                         throw new IndexOutOfRangeException("No valid users for raffle.");
                     Random r = new Random(DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond);
-                    User winner = raffleEntries[r.Next(raffleEntries.Count)];
-                    winner.IsRaffleWinner = true;
-                    
+                    User winner = raffleEntries[r.Next(raffleEntries.Count)];                    
                     return winner.DiscordUser;
                 }
                 catch (IndexOutOfRangeException) { throw; }
                 catch { throw new Exception("Error in processing raffle"); }
 
+            }
+            public void ConfirmRaffle(SocketUser winner)
+            {
+                User u = Users.FirstOrDefault(user => user.DiscordUser.Id == winner.Id) ?? throw new NullReferenceException(message: "User not found in system.");
+                u.IsRaffleWinner = true;
             }
             #endregion
         }
@@ -799,7 +802,6 @@
             }).GetButton()).Build());
         }
 
-        //*note* Doesn't notify officers before announcing the raffle
         private async Task DrawRaffle(SocketSlashCommand _command)
         {
             ///Checks if the event has started
@@ -807,15 +809,18 @@
                 throw new Exception("Error: No event currently running.");
 
             await Program.Interactions[_command].Respond(components: new ComponentBuilder().WithButton(new Program.Button(_command, "Confirm", ButtonStyle.Danger, async Task (SocketSlashCommand _command) => {
-                try
-                {
-                    ///Displays a message notifying everyone of a raffle being drawn
-                    await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: $"@everyone Congratulations to {xpSystem.DrawRaffle().Mention} for winning the raffle!\nMake sure to contact an officer to redeem your prize.");
-                }
-                catch { throw; }
+                SocketUser winner = xpSystem.DrawRaffle();
 
-                ///User Feedback
-                await Program.Interactions[_command].Respond("Successfully drew a raffle.");
+                ///Mod Confirmation
+                await Program.Interactions[_command].Respond(text: $"Winner: {Program.Server.GetUser(winner.Id).Nickname}", components: new ComponentBuilder().WithButton(new Program.Button(_command, "Confirm", ButtonStyle.Success, async Task (SocketSlashCommand _command) => {
+                    xpSystem.ConfirmRaffle(winner);
+                    
+                    ///Displays a message notifying everyone of a raffle being drawn
+                    await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: $"@everyone Congratulations to {winner.Mention} for winning the raffle!\nMake sure to contact an officer to redeem your prize.");
+
+                    ///User Feedback
+                    await Program.Interactions[_command].Respond("Successfully drew a raffle.");
+                }).GetButton()).Build());
             }).GetButton()).Build());
         }
 

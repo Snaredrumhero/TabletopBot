@@ -40,7 +40,7 @@ namespace TableTopBot
             {
                 if(!Callbacks.ContainsKey(_command.CommandId)) 
                     return;
-                string log = $"[{DateTime.Now}]\nUser: {_command.User.Username}\nCommand: {_command.CommandName}\nParams: ";
+                string log = $"[{DateTime.UtcNow}]\nUser: {_command.User.Username}\nCommand: {_command.CommandName}\nParams: ";
                 foreach (SocketSlashCommandDataOption o in _command.Data.Options.ToList())
                     log += $"\n{o.Name}: {o.Value}";
                 await PrivateVariables.SocketLogChannel.SendMessageAsync(embed: new EmbedBuilder().AddField("Command Executed", log).Build());
@@ -53,14 +53,14 @@ namespace TableTopBot
                     try { await Callbacks[_command.CommandId](_command); }
                     catch (Exception ex)
                     {
-                        string error = $"[{DateTime.Now}] Error: {ex.Message}";
+                        string error = $"[{DateTime.UtcNow}] Error: {ex.Message}";
                         Console.WriteLine(error);
                         await Interactions[_command].Respond(text: error);
                         await PrivateVariables.SocketLogChannel.SendMessageAsync(text: error);
                     }
                 }
             };
-            Client.ButtonExecuted += async (SocketMessageComponent _button) =>    ///Confirmation
+            Client.ButtonExecuted += async (SocketMessageComponent _button) => ///Buttons
             { 
                 if (Button.Buttons.ContainsKey(_button.Data.CustomId))
                 {
@@ -76,23 +76,48 @@ namespace TableTopBot
             ///Fully connected
             Client.Connected += async () =>
             {
-                //Make mod only commands only show up for mods
                 await AddCommand(new Command()
                 {
                     name = "help",
                     description = "get information about this bot's commands",
-                    callback = async Task (SocketSlashCommand _command) => await RecursiveMuliPageEmbed(_command, Command.allCommands.Select(c => new EmbedBuilder().WithDescription(c.description).WithTitle(c.name)).ToArray())
+                    callback = async Task (SocketSlashCommand _command) =>
+                    {
+                        bool mod = Server.GetUser(_command.User.Id).GuildPermissions.KickMembers;
+                        await RecursiveMuliPageEmbed(_command, Command.allCommands.Where(c => mod ? true : !c.modOnly).Select(c => new EmbedBuilder().WithDescription(c.description).WithTitle(c.name)).ToArray());
+                    }
                 });
                 await Client.SetGameAsync("Board Games");
                 acceptingCommands = true;
             };
 
-            ///run bot
+            ///Threads
+            bool end = false;
+
+            Thread update = new Thread(() => {
+                while (!end)
+                {
+                    Interaction.UpdateInteractions();
+                    Button.UpdateButtons();
+                    Thread.Sleep(1000);
+                }
+            });
+            Thread consoleCommands = new Thread(() => {
+                while (!end)
+                {
+                    string input = (Console.ReadLine() ?? "").ToLower();
+                    if (input == "quit")
+                        end = true;
+                }
+            });
+
+            ///Run bot
             await Client.LoginAsync(TokenType.Bot, PrivateVariables.Key);
             await Client.StartAsync();
             await Client.SetGameAsync("Getting The Cart Out");
             while (!acceptingCommands) await Task.Delay(1000);
-            await AwaitConsoleCommands();
+            update.Start();
+            consoleCommands.Start();
+            while (!end) await Task.Delay(1000);
             await PrivateVariables.SocketServer.DeleteApplicationCommandsAsync();
             await Client.LogoutAsync();
             
@@ -180,18 +205,6 @@ namespace TableTopBot
         public void AddWebhooksUpdatedCallback(Func<SocketGuild, SocketChannel, Task> f) => Client.WebhooksUpdated += f;
         #endregion
 
-        ///Awaits a list of console commands (currently only "Quit")
-        private Task AwaitConsoleCommands()
-        {
-            Console.Write(">");
-            string? input = Console.ReadLine();
-            while(input == null || input.ToLower() != "quit") {
-                Console.Write("Command not recognized\n>");
-                input = Console.ReadLine(); 
-            }
-            return Task.CompletedTask;
-        }
-
         ///Commands
         private static Dictionary<ulong, Func<SocketSlashCommand, Task>> Callbacks = new Dictionary<ulong, Func<SocketSlashCommand, Task>>();
         public static Dictionary<SocketSlashCommand, Interaction> Interactions = new Dictionary<SocketSlashCommand, Interaction>();
@@ -202,7 +215,7 @@ namespace TableTopBot
             { 
                 Callbacks.Add((await PrivateVariables.SocketServer.CreateApplicationCommandAsync(_command.GetCommandBuilder().Build())).Id, _command.callback);
                 Command.allCommands.Add(_command);
-                Console.WriteLine($"[{DateTime.Now}] Added Command: {_command.name}");
+                Console.WriteLine($"[{DateTime.UtcNow}] Added Command: {_command.name}");
             }
             catch (Exception ex) { Console.WriteLine(ex); }
         }
@@ -246,14 +259,18 @@ namespace TableTopBot
             public ButtonBuilder GetButton() => ButtonBuilder;
             public Task Press() => Callback(Command);
             public void DeleteButton() => Buttons.Remove(ID);
+            public static void UpdateButtons() => buttonsCreated = Buttons.Count() == 0 ? 0 : buttonsCreated;
         }
-
-        //*note* would be good to remove an interaction after around 5 minutes
         public class Interaction
         {
             public readonly SocketSlashCommand Command;
+            private DateTime LastUsed;
 
-            public Interaction(SocketSlashCommand command) { Command = command; }
+            public Interaction(SocketSlashCommand command) 
+            { 
+                Command = command; 
+                LastUsed = DateTime.UtcNow; 
+            }
 
             public async Task Respond(string? text = null, Embed[]? embeds = null, bool isTTS = false, bool ephemeral = true, AllowedMentions? allowedMentions = null, MessageComponent? components = null, Embed? embed = null, RequestOptions? options = null)
             {
@@ -261,6 +278,7 @@ namespace TableTopBot
                     await Command.ModifyOriginalResponseAsync(m => { m.Content = text; m.Embeds = embeds; m.AllowedMentions = allowedMentions; m.Components = components; m.Embed = embed; }, options);
                 else
                     await Command.RespondAsync(text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options);
+                LastUsed = DateTime.UtcNow;
             }
 
             public async Task DeleteInteraction()
@@ -268,6 +286,8 @@ namespace TableTopBot
                 await Command.DeleteOriginalResponseAsync();
                 Interactions.Remove(Command);
             }
+
+            public static void UpdateInteractions() => Interactions.Values.Where(i => DateTime.UtcNow.Subtract(i.LastUsed).Minutes > 5).ToList().ForEach(async i => await i.DeleteInteraction());
         }
 
         public static async Task RecursiveMuliPageEmbed(SocketSlashCommand _command, EmbedBuilder[] embeds, int index = 0)
