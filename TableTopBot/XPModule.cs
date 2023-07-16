@@ -369,6 +369,8 @@
                 {
                     name = "start-event",
                     description = "starts the all-day event.",
+                    extendedDecription = "Creates a new or existing event based on the name given. It will run the event to which event attendees can now use the bot.",
+                    parameters = "- event-name: Name of the event that will be run. Running the exact name of an already created event will rerun the event",
                     callback = StartEvent,
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>() {
@@ -391,6 +393,7 @@
                 {
                     name = "end-event",
                     description = "ends the all-day event.",
+                    extendedDecription = "Will end a running event, removing commands from the event attendees as well as displaying the top 3 players and general statistics.",
                     callback = EndEvent,
                     modOnly = true,
                 });
@@ -402,6 +405,7 @@
                 {
                     name = "draw-raffle",
                     description = "draws a raffle ticket",
+                    extendedDecription = "Takes each user in the event and creates a raffle. Additional tickets that a user has will increase their chances of winning.",
                     callback = DrawRaffle,
                     modOnly = true,
                 });
@@ -413,6 +417,8 @@
                 {
                     name = "see-user",
                     description = "view a player's profile",
+                    extendedDecription = "Checks a user's profile, listing their points, games played, time spent in the event, and other statistics.",
+                    parameters = "- user: User to look through and see all statistics about them",
                     callback = SeeUser,
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>() {
@@ -433,6 +439,8 @@
                 {
                     name = "see-user-games",
                     description = "views a user's completed games",
+                    extendedDecription = "Checks a user's completed games, listing all statistics associated with each game.",
+                    parameters = "- user: Player to view their completed games",
                     callback = SeeUserGames,
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>(){
@@ -453,6 +461,8 @@
                 {
                     name = "see-user-achievements",
                     description = "views a user's claimed achievements",
+                    extendedDecription = "Checks all achievements claimed by a user.",
+                    parameters = "- user: Player to view their claimed achievements",
                     callback = SeeUserAchievements,
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>(){
@@ -474,6 +484,8 @@
                 {
                     name = "see-x-users",
                     description = "shows a leaderboard to you",
+                    extendedDecription = "Displays the top specified number of event attendees that are ranking based on the number of points they currently have\n(Note: Points used to purchase tickets WILL decrease your scoring)",
+                    parameters = "- number: The number of users to display based on their points ranking in the event",
                     callback = SeeXUsers,
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>() {
@@ -494,6 +506,8 @@
                 {
                     name = "remove-user-game",
                     description = "removes a game from a user's profile",
+                    extendedDecription = "Takes out a user's game from their profile and adjusts their profile accordingly.",
+                    parameters = "- user: Player that will have one of their games removed\n- id: the id of the user's game to be removed",
                     callback = RemoveUserGame,
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>() {
@@ -520,13 +534,15 @@
                 {
                     name = "remove-user-achievement",
                     description = "removes an achievement from a user's profile",
+                    extendedDecription = "Unclaims a user's achievement from their profile and adjusts their profile accordingly.",
+                    parameters = "- user: Player that will have one of their achievements unclaimed\n- name: the name of the user's achievement to be unclaimed",
                     callback = RemoveUserAchievement,
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder() {
-                            Name = "player",
+                            Name = "user",
                             Type = ApplicationCommandOptionType.User,
-                            Description = "the user to remove an achievement from",
+                            Description = "the player to remove an achievement from",
                             IsRequired = true,
                         },
                         new SlashCommandOptionBuilder(){
@@ -546,13 +562,15 @@
                 {
                     name = "remove-user",
                     description = "removes a user's profile",
+                    extendedDecription = "Takes out a user's profile that is currently in the event, removing all data they had.",
+                    parameters = "- user: Player to remove from the event",
                     callback = RemoveUser,
                     modOnly = true,
                     options = new List<SlashCommandOptionBuilder>(){
                         new SlashCommandOptionBuilder(){
-                            Name = "player",
+                            Name = "user",
                             Type = ApplicationCommandOptionType.User,
-                            Description = "the user to remove",
+                            Description = "the player to remove",
                             IsRequired = true,
                         },
                     },
@@ -568,6 +586,8 @@
                 {
                     name = "join-event",
                     description = "registers you for the current event",
+                    extendedDecription = "Adds you to the currently running event, allowing you to earn points and participate in raffles.",
+                    parameters = "- pid: Personal Identification Number assigned to Ohio University students",
                     callback = JoinEvent,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
@@ -587,6 +607,7 @@
                 {
                     name = "leave-event",
                     description = "unregisters you from the current event",
+                    extendedDecription = "Takes you out of the event and deletes your data from the event.",
                     callback = LeaveEvent,
                 });
                 /**
@@ -597,6 +618,7 @@
                 {
                     name = "see-self",
                     description = "shows you your stats",
+                    extendedDecription = "Look at your PID, number of points earned, number of tickets bought, time played, games played, and raffle earnings.",
                     callback = SeeSelf,
                 });
                 /**
@@ -607,6 +629,10 @@
                 {
                     name = "add-game",
                     description = "adds a game to your profile",
+                    extendedDecription = "Adds a game to your profile and calculate points based on game type, time spent, rank, and number of players.",
+                    parameters = "- name: Name of the game that was played\n- player-count: How many players were playing in the game"
+                        + "\n- type: The type of game that was played\n> __*ranked*__: Each player plays against each other\n> __*coop*__: All players are working together\n> __*teams*__: Players split up into groups and compete against each other\n> __*party*__: Player join in a casual and fun game"
+                        + "\n- placing: Your ranking/placing in the game (if team-based, consider all members as having the same rank unless otherwise noted by the game)\n- time: How long you have played the current game for",
                     callback = AddGame,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
@@ -658,6 +684,8 @@
                 {
                     name = "remove-game",
                     description = "removes a game from your profile",
+                    extendedDecription = "Removes a specified game from your profile based on their id and makes adjustments to your profile as needed.",
+                    parameters = "- id: The id number of the game to be removed from your profile\n(Note: You can find the id of the game to remove by using the see-games command)",
                     callback = RemoveGame,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
@@ -676,6 +704,7 @@
                 {
                     name = "see-games",
                     description = "shows your completed games",
+                    extendedDecription = "Lists all of the games you have played, displaying each game's id, points, game type, player count, personal ranking, and game length.",
                     callback = SeeGames,
                 });
                 /**
@@ -686,6 +715,8 @@
                 {
                     name = "add-achievement",
                     description = "adds an achievement to your profile",
+                    extendedDecription = "Adds an achievement from the list of available achievements to your profile based on the name given.",
+                    parameters = "- name: The name of the achievement to add to your profile]\n(Note: You may find all available achievements by using the see-achievements command)",
                     callback = AddAchievement,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
@@ -705,6 +736,8 @@
                 {
                     name = "remove-achievement",
                     description = "removes an achievement from your profile",
+                    extendedDecription = "Unclaims an achievment from your profile and adjusts your profile accordingly.",
+                    parameters = "- name: The name of the achievement to remove from your profile\n(Note: You may find all claimed achievements by using the see-achievements command)",
                     callback = RemoveAchievement,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
@@ -723,6 +756,8 @@
                 {
                     name = "see-achievements",
                     description = "shows achievements you have completed or all available achievements",
+                    extendedDecription = "Either displays all possible achievements that are active in the event, displays all achievements you have earned at that point, or display a single achievement based on the user's input.",
+                    parameters = "- show-all: True will return all achievements listed in the event, false will either display all claimed achievements or a specific achievement\n(Note: Will automatically display all achievements if no input is given) \n- name: the name of the achievement to display\n(Note: Will override show-all if an input is given)",
                     callback = SeeAchievements,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){
@@ -741,6 +776,8 @@
                 {
                     name = "buy-tickets",
                     description = "buy tickets",
+                    extendedDecription = "Adds the specified number tickets to your profile and will calculate points as needed. Will not add tickets if required number of points is too low.\n(Note: Points used to purchase tickets WILL decrease your scoring)",
+                    parameters = "- tickets: Number of tickets to add to your account. Will not work if you do not have enough points to purchase tickets",
                     callback = BuyTickets,
                     options = new List<SlashCommandOptionBuilder>() {
                         new SlashCommandOptionBuilder(){

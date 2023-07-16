@@ -69,6 +69,23 @@ namespace TableTopBot
                     Button.Buttons[_button.Data.CustomId].DeleteButton();
                 }
             };
+            Client.SelectMenuExecuted += async (SocketMessageComponent _selectMenu) => ///Buttons
+            { 
+                switch(_selectMenu.Data.CustomId)
+                {
+                    case "help":
+                        try
+                        {
+                            await _selectMenu.DeferAsync();
+                            Command command = Command.allCommands.Find(c => c.name == string.Join(", ", _selectMenu.Data.Values)) ?? throw new Exception("Error: Cannot find command!");
+                            await _selectMenu.ModifyOriginalResponseAsync(m =>{m.Embed = new EmbedBuilder()
+                            .WithTitle($"**{command.name}**").WithDescription($"{command.extendedDecription}" + $"\n\n__Parameters__\n{command.parameters}")
+                            .WithColor(command.modOnly ? Color.Red : Color.Blue).Build(); });
+                        }
+                        catch {throw;}
+                        break;
+                }
+            };
 
             ///Init all moduels
             new XPModule(this);
@@ -80,10 +97,24 @@ namespace TableTopBot
                 {
                     name = "help",
                     description = "get information about this bot's commands",
+                    extendedDecription = "Displays information about all commands from TabletopBot",
                     callback = async Task (SocketSlashCommand _command) =>
                     {
                         bool mod = Server.GetUser(_command.User.Id).GuildPermissions.KickMembers;
-                        await RecursiveMuliPageEmbed(_command, Command.allCommands.Where(c => mod ? true : !c.modOnly).Select(c => new EmbedBuilder().WithDescription(c.description).WithTitle(c.name)).ToArray());
+                        //await RecursiveMuliPageEmbed(_command, Command.allCommands.Where(c => mod ? true : !c.modOnly).Select(c => new EmbedBuilder().WithDescription(c.description).WithTitle(c.name)).ToArray());
+                        SelectMenuBuilder menu = new SelectMenuBuilder().WithPlaceholder("Select Commands").WithCustomId("help");
+                        if(mod){
+                            foreach(Command c in Command.allCommands){
+                                menu.AddOption(new SelectMenuOptionBuilder().WithLabel(c.name).WithDescription(c.description).WithValue(c.name));
+                            }
+                        }
+                        else
+                        {
+                            foreach(Command c in Command.allCommands.Where(g => g.modOnly == false)){
+                                menu.AddOption(new SelectMenuOptionBuilder().WithLabel(c.name).WithDescription(c.description).WithValue(c.name));
+                            }
+                        }
+                        await _command.RespondAsync(embed: new EmbedBuilder().WithTitle("List of Commands").WithDescription("Select a command below to view their descriptions:").WithColor(Color.Orange).Build(), components: new ComponentBuilder().WithSelectMenu(menu).Build(),ephemeral: true);
                     }
                 });
                 await Client.SetGameAsync("Board Games");
@@ -226,6 +257,8 @@ namespace TableTopBot
 
             public string name = "";
             public string description = "";
+            public string extendedDecription = "";
+            public string parameters = "None";
             public bool modOnly = false;
             public Func<SocketSlashCommand, Task> callback = (SocketSlashCommand _command) => throw new NotImplementedException();
             public List<SlashCommandOptionBuilder> options = new List<SlashCommandOptionBuilder>();
