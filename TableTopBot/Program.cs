@@ -281,13 +281,13 @@ namespace TableTopBot
             private SocketSlashCommand Command;
             private readonly ButtonBuilder ButtonBuilder;
 
-            public Button(SocketSlashCommand command, string buttonText, ButtonStyle style, Func<SocketSlashCommand, Task> callback)
+            public Button(SocketSlashCommand command, string buttonText, ButtonStyle style, Func<SocketSlashCommand, Task> callback, bool disabled = false)
             {
                 ID = (buttonsCreated++).ToString();
                 Callback = callback;
                 Command = command;
                 Buttons.Add(ID, this);
-                ButtonBuilder = new ButtonBuilder(buttonText, ID, style);
+                ButtonBuilder = new ButtonBuilder(buttonText, ID, style).WithDisabled(disabled);
             }
             public ButtonBuilder GetButton() => ButtonBuilder;
             public Task Press() => Callback(Command);
@@ -323,7 +323,7 @@ namespace TableTopBot
             public static void UpdateInteractions() => Interactions.Values.Where(i => DateTime.UtcNow.Subtract(i.LastUsed).Minutes > 5).ToList().ForEach(async i => await i.DeleteInteraction());
         }
 
-        public static async Task RecursiveMuliPageEmbed(SocketSlashCommand _command, EmbedBuilder[] embeds, int index = 0)
+        public static async Task RecursiveMuliPageEmbed(SocketSlashCommand _command, EmbedBuilder[] embeds, string title, int index = 0, Color? color = null)
         {
             if (embeds.Length == 0)
             {
@@ -332,11 +332,11 @@ namespace TableTopBot
             }
 
             ///Make buttons
-            ButtonBuilder prev = new Button(_command, "Previous", ButtonStyle.Primary, async Task (SocketSlashCommand _command) => await RecursiveMuliPageEmbed(_command, embeds, index - 1 < 0 ? embeds.Length - 1 : --index)).GetButton();
-            ButtonBuilder next = new Button(_command, "Next", ButtonStyle.Primary, async Task (SocketSlashCommand _command) => await RecursiveMuliPageEmbed(_command, embeds, index + 1 >= embeds.Length ? 0 : ++index)).GetButton();
+            ButtonBuilder prev = new Button(_command, "Previous", ButtonStyle.Primary, async Task (SocketSlashCommand _command) => await RecursiveMuliPageEmbed(_command, embeds, title, index - 1 < 0 ? embeds.Length - 1 : --index, color), (embeds.Count() == 1)).GetButton();
+            ButtonBuilder next = new Button(_command, "Next", ButtonStyle.Primary, async Task (SocketSlashCommand _command) => await RecursiveMuliPageEmbed(_command, embeds, title, index + 1 >= embeds.Length ? 0 : ++index, color), (embeds.Count() == 1)).GetButton();
 
             ///Display
-            await Interactions[_command].Respond(embed: embeds[index].WithFooter($"{index + 1}/{embeds.Length}").Build(), components: new ComponentBuilder().WithButton(prev).WithButton(next).Build());
+            await Interactions[_command].Respond(embed: embeds[index].WithTitle(title).WithFooter($"Page {index + 1}/{embeds.Length}").WithColor(color == null ? Color.Blue : (Color) color).Build(), components: new ComponentBuilder().WithButton(prev).WithButton(next).Build());
         }
 
     }
