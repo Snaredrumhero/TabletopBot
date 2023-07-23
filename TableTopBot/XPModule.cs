@@ -194,7 +194,7 @@
                 User u = Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.");
                 if (u.TotalPoints < TICKET_THRESHOLDS[TICKET_THRESHOLDS.Length - 1])
                     throw new Exception($"Error: User did not reach point threshold of {TICKET_THRESHOLDS[TICKET_THRESHOLDS.Length - 1]}");
-                else if (x * TICKET_VALUE > u.TotalPoints)
+                else if (x * TICKET_VALUE > u.CurrentPoints)
                     throw new Exception($"Error: User does not have enough points. Tickets cost {TICKET_VALUE} points each.");
                 u.BoughtTickets += x;
                 Save();
