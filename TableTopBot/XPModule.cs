@@ -1,182 +1,45 @@
-﻿using Discord;
-using Discord.WebSocket;
-using System.Text.Json;
-
-namespace TableTopBot
+﻿namespace TableTopBot
 {
-    internal class XPModule : Module
+    internal class XPModule
     {
-        public enum GameType { Ranked = 1, CoOp = 2, Teams = 3, Party = 4 } ///Represents the types of games
-        static Func<List<Tuple<String,EmbedBuilder>>> HelpListExpandedBuilder = () =>
+        private enum GameType { NULL = 0, Ranked = 1, CoOp = 2, Teams = 3, Party = 4 }
+
+        private class XpStorage
         {
-            List<Tuple<String,EmbedBuilder>> g = new List<Tuple<String,EmbedBuilder>>();
-            
-            g.Add(new Tuple<string, EmbedBuilder>("join-event", new EmbedBuilder().WithTitle("Player Commands").AddField("**join-event**",
-            "Adds you to the currently running event, allowing you to earn points and participate in raffles."
-            + "\n\n__Parameters__\n- pid: Personal Identification Number assigned to Ohio University students"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("leave-event", new EmbedBuilder().WithTitle("Player Commands").AddField("**leave-event**",
-            "Takes you out of the event and deletes your data from the event."
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("see-self", new EmbedBuilder().WithTitle("Player Commands").AddField("**see-self**",
-            "Look at your PID, number of points earned, number of tickets bought, time played, games played, and raffle earnings."
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("add-game", new EmbedBuilder().WithTitle("Player Commands").AddField("**add-game**",
-            "Adds a game to your profile and calculate points based on game type, time spent, rank, and number of players."
-            + "\n\n__Parameters__\n- name: Name of the game that was played\n- player-count: How many players were playing in the game"
-            + "\n- type: The type of game that was played\n> __*ranked*__: Each player plays against each other\n> __*coop*__: All players are working together\n> __*teams*__: Players split up into groups and compete against each other\n> __*party*__: Player join in a casual and fun game"
-            + "\n- placing: Your ranking/placing in the game (if team-based, consider all members as having the same rank unless otherwise noted by the game)\n- time: How long you have played the current game for"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("remove-game", new EmbedBuilder().WithTitle("Player Commands").AddField("remove-game",
-            "Removes a specified game from your profile based on their id and makes adjustments to your profile as needed."
-            + "\n\n__Parameters__\n- id: The id number of the game to be removed from your profile\n(Note: You can find the id of the game to remove by using the see-games command)"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("see-games", new EmbedBuilder().WithTitle("Player Commands").AddField("see-games",
-            "Lists all of the games you have played, displaying each game's id, points, game type, player count, personal ranking, and game length."
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("add-achievement", new EmbedBuilder().WithTitle("Player Commands").AddField("add-achievement",
-            "Adds an achievement from the list of available achievements to your profile based on the name given."
-            + "\n\n__Parameters__\n- name: The name of the achievement to add to your profile]\n(Note: You may find all available achievements by using the see-achievements command)"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("remove-achievement", new EmbedBuilder().WithTitle("Player Commands").AddField("remove-achievement",
-            "Unclaims an achievment from your profile and adjusts your profile accordingly."
-            + "\n\n__Parameters__\n- name: The name of the achievement to remove from your profile\n(Note: You may find all claimed achievements by using the see-achievements command)"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("see-achievements", new EmbedBuilder().WithTitle("Player Commands").AddField("see-achievements",
-            "Either displays all possible achievements that are active in the event, displays all achievements you have earned at that point, or display a single achievement based on the user's input."
-            + "\n\n__Parameters__\n- show-all: True will return all achievements listed in the event, false will either display all claimed achievements or a specific achievement\n(Note: Will automatically display all achievements if no input is given) \n- name: the name of the achievement to display\n(Note: Will override show-all if an input is given)"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("buy-tickets", new EmbedBuilder().WithTitle("Player Commands").AddField("buy-tickets",
-            "Adds the specified number tickets to your profile and will calculate points as needed. Will not add tickets if required number of points is too low.\n(Note: Points used to purchase tickets WILL decrease your scoring)"
-            + "\n\n__Parameters__\n- tickets: Number of tickets to add to your account. Will not work if you do not have enough points to purchase tickets"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("show-x-users", new EmbedBuilder().WithTitle("Player Commands").AddField("show-x-users",
-            "Displays the top specified number of event attendees that are ranking based on the number of points they currently have\n(Note: Points used to purchase tickets WILL decrease your scoring)"
-            + "\n\n__Parameters__\n- number: The number of users to display based on their points ranking in the event"
-            )));
-            
-            
-            
-            
-            g.Add(new Tuple<string, EmbedBuilder>("start-event", new EmbedBuilder().WithTitle("Admin Commands").AddField("start-event",
-            "Creates a new or existing event based on the name given. It will run the event to which event attendees can now use the bot."
-            + "\n\n__Parameters__\n- event-name: Name of the event that will be run. Running the exact name of an already created event will rerun the event"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("end-event", new EmbedBuilder().WithTitle("Admin Commands").AddField("end-event",
-            "Will end a running event, removing commands from the event attendees as well as displaying the top 3 players and general statistics."
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("draw-raffle",new EmbedBuilder().WithTitle("Admin Commands").AddField("draw-raffle",
-            "Takes each user in the event and creates a raffle. Additional tickets that a user has will increase their chances of winning."
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("see-player", new EmbedBuilder().WithTitle("Admin Commands").AddField("see-player",
-            "Checks a user's profile, listing their points, games played, time spent in the event, and other statistics."
-            + "\n\n__Parameters__\n- player: User to look through and see all statistics about them"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("see-player-games", new EmbedBuilder().WithTitle("Admin Commands").AddField("see-player-games",
-            "Checks a user's completed games, listing all statistics associated with each game."
-            + "\n\n__Parameters__\n- player: User to view their completed games"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("see-player-achievements", new EmbedBuilder().WithTitle("Admin Commands").AddField("see-player-achievements",
-            "Checks all achievements claimed by a user."
-            + "\n\n__Parameters__\n- player: User to view their claimed achievements"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("remove-player", new EmbedBuilder().WithTitle("Admin Commands").AddField("remove-player",
-            "Takes out a user's profile that is currently in the event, removing all data they had."
-            + "\n\n__Parameters__\n- player: User to remove from the event"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("remove-player-game", new EmbedBuilder().WithTitle("Admin Commands").AddField("remove-player-game",
-            "Takes out a user's game from their profile and adjusts their profile accordingly."
-            + "\n\n__Parameters__\n- player: User that will have one of their games removed\n- id: the id of the user's game to be removed"
-            )));
-            
-            g.Add(new Tuple<string, EmbedBuilder>("remove-player-achievement", new EmbedBuilder().WithTitle("Admin Commands").AddField("remove-player-achievement",
-            "Unclaims a user's achievement from their profile and adjusts their profile accordingly."
-            + "\n\n__Parameters__\n- player: User that will have one of their achievements unclaimed\n- name: the name of the user's achievement to be unclaimed"
-            )));
-            
-            return g;
-        };
-        
-        static Func<EmbedBuilder> HelpListBuilder = () =>
-        {       
-            EmbedBuilder g = new EmbedBuilder().WithTitle("**All Commands**").AddField("__**Player Commands**__",
-                "- **join-event**\n> registers you for the current event\n"
-                + "\n- **leave-event**\n> unregisters you for the current event\n"
-                + "\n- **see-self**\n> shows you your stats\n"
-                + "\n- **add-game**\n> adds a game to your profile\n"
-                + "\n- **remove-game**\n> removes a game from your profile\n"
-                + "\n- **see-games**\n> shows your completed games\n"
-                + "\n- **add-achievement**\n> adds an achievement to your profile\n"
-                + "\n- **remove-achievement**\n> removes an achievement from your profile\n"
-                + "\n- **see-achievements**\n> shows achievements you have completed or all available achievements\n"
-                + "\n- **buy-tickets**\n> buy tickets and add them to your profile\n"
-                + "\n- **show-x-users**\n> shows a leaderboard of top x users\n", false)
-                
-                .AddField("__**Admin Commands**__",
-                "- **start-event**\n> starts the all-day event\n"
-                + "\n- **end-event**\n> ends the all-day event\n"
-                + "\n- **draw-raffle**\n> draws araffle ticket\n"
-                + "\n- **see-player**\n> views a player's profile\n"
-                + "\n- **see-player-games**\n> views a player's completed games\n"
-                + "\n- **see-player-achievements**\n> views a player's claimed achievements\n"
-                + "\n- **remove-player**\n> removes a player's profile\n"
-                + "\n- **remove-player-game**\n> removes a game from a player's profile\n"
-                + "\n- **remove-player-achievement**\n> removes an achievement from a player's profile\n", false
-            ); 
-            
-            return g;
-            
-        };
-        
-        ///Sub Classes
-        /**
-         * XpStorage
-         * Stores an all day event for Bobcat Tabletop
-         */
-        public class XpStorage
-        {
-            ///Sub Classes
-            /**
-             * User
-             * Stores an individual user in the event
-             */
-            public class User
+            public static bool CanLoad(string eventName) => File.Exists($"./events/{eventName}.json");
+            public readonly string EventName;
+            private string Path => $"./events/{EventName}.json";
+            public XpStorage(string eventName)
+            {
+                EventName = eventName;
+                if (File.Exists(Path))
+                    using (FileStream stream = new FileStream(Path, FileMode.Open))
+                        Users = (JsonSerializer.Deserialize<UserData[]>(stream, JsonOptions) ?? new UserData[0]).Select(u => (User)u).ToList();
+                else Users = new List<User>();
+                Save();
+                SimpleLog("XP System Initalized");
+            }
+            private void Save() => File.WriteAllText(Path, JsonSerializer.Serialize(Users.Select(u => (UserData)u), JsonOptions));
+            public string DisplayAll() => $"***Average Time Spent:*** {Math.Round((double)Users.Sum(u => u.CurrentTime) / Users.Count, 2)} Minutes\n***Average Number of Games Played:*** {Math.Round((double)Users.Sum(u => u.GamesPlayed.Count) / Users.Count, 2)}\n***Average Amount of XP Earned:*** {Math.Round((double)Users.Sum(u => u.TotalPoints) / Users.Count, 2)}\n***Total Attendees:*** {Users.Count}";
+
+            #region Users
+            private class User
             {
                 ///Variables
-                private readonly List<string> _achievementsClaimed;         ///The list of all possible achievements a user can get
-                private readonly List<Game> _gamesPlayed;                   ///The games the user has played in
-                public SocketUser DiscordUser;                              ///The user's discord
-                public readonly string Pid;                                 ///The user's Ohio University ID
-                public bool IsRaffleWinner;                                 ///If the user has won a raffle prize
-                private ushort NumberGamesPlayed;                           ///only used for tracking game ids
-                public MultiPageEmbed? PageEmbed;                           ///Used to create embed pages for user's games and achievements
-                public int BoughtTickets;                                   ///Tickets that are bought with the user's points
-                public DateTime StartTime;                                  ///The time that they have logged into the event
-                public TimeSpan CurrentTime => DateTime.Now - StartTime;    ///The total time a user has spent in the event 
-                
-                
-                ///Tells the current points a user has by using the maximum points and the tickets bought by the user
-                public int CurrentPoints() { return TotalPoints() - (BoughtTickets * TicketPrice); } 
-            
+                private readonly List<string> _achievementsClaimed; ///The list of all possible achievements a user can get
+                private readonly List<Game> _gamesPlayed;           ///The games the user has played in
+
+                public SocketUser DiscordUser;                      ///The user's discord
+                public readonly string Pid;                         ///The user's Ohio University ID
+                public bool IsRaffleWinner;                         ///If the user has won a raffle prize
+                private ushort NumberGamesPlayed;                   ///only used for tracking game ids
+                public uint BoughtTickets;                          ///Tickets that are bought with the user's points
+
+                public uint CurrentPoints => TotalPoints - (BoughtTickets * PrivateVariables.TicketValue); ///Tells the current points a user has by using the maximum points and the tickets bought by the user
+                public uint CurrentTime => (uint)_gamesPlayed.Sum(g => g.Data.GameLength);
+
                 ///Constructor
-                public User(SocketUser user, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, int tickets = 0, DateTime startTime = new DateTime())
+                public User(SocketUser user, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, uint tickets = 0)
                 {
                     DiscordUser = user;
                     Pid = pid;
@@ -185,123 +48,81 @@ namespace TableTopBot
                     NumberGamesPlayed = numberGamesPlayed;
                     _achievementsClaimed = achievements ?? new List<string>();
                     BoughtTickets = tickets;
-                    StartTime = startTime;
                 }
-                private User(ulong id, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, int tickets = 0, DateTime startTime = new DateTime()) : this(Program.Server().GetUser(id), pid, gamesPlayed, isRaffleWinner, numberGamesPlayed, achievements, tickets, startTime) { }
+                private User(ulong id, string pid, List<Game>? gamesPlayed = null, bool isRaffleWinner = false, ushort numberGamesPlayed = 0, List<string>? achievements = null, uint tickets = 0) : this(Server.GetUser(id), pid, gamesPlayed, isRaffleWinner, numberGamesPlayed, achievements, tickets) { }
 
                 ///Mutators
                 ///Rank = 1 for win 2 for loss in an unranked game
-                public void AddGame(string name, uint playerCount, GameType type, uint rank, uint length) => _gamesPlayed.Add(new Game(name, NumberGamesPlayed++, type, playerCount, rank, length));
-                public void RemoveGame(int id) => _gamesPlayed.RemoveAll(game => game.Data.Id == id);
-                public void ClaimAchievement(string achievementName)
+                public Game AddGame(string name, uint playerCount, GameType type, uint rank, uint length){
+                    _gamesPlayed.Add(new Game(name, NumberGamesPlayed++, type, playerCount, rank, length));
+                    return _gamesPlayed.Last();
+                }
+                public Game RemoveGame(int id)
+                { 
+                    Game removedGame = _gamesPlayed.Find(g => g.Data.Id == id) ?? throw new Exception("Cannot find game"); 
+                    _gamesPlayed.RemoveAll(game => game.Data.Id == id);
+                    return removedGame;
+                }
+                public string ClaimAchievement(string achievementName)
                 {
                     if (!DefaultAchievements.Select(a => a.Data.Name).Contains(achievementName))
                         throw new ArgumentException("Achievement Not Found");
-                    else if(_achievementsClaimed.Select(a => a).Contains(achievementName))
-                    {
+                    else if (_achievementsClaimed.Select(a => a).Contains(achievementName))
                         throw new ArgumentException("Already Claimed Achievement");
-                    }
                     _achievementsClaimed.Add(achievementName);
-                }
-                public void UnclaimAchievement(string achievementName) => _achievementsClaimed.Remove(achievementName);
-
-                ///Accessors
-                public List<Game> GamesPlayed { get { return _gamesPlayed; } }
-                public List<Achievement> Achievements => DefaultAchievements.Where(achievement => _achievementsClaimed.Contains(achievement.Data.Name)).ToList();
-                public int TotalPoints() { return _gamesPlayed.Select(game => game.XpValue).Sum() + Achievements.Select(achievement => achievement.Data.XpValue).Sum(); }
-                public override string ToString() { return $"__**{DiscordUser.Username}**__\n- PID: {Pid}\n- Points: {CurrentPoints()}\n- Claimed Raffle: {IsRaffleWinner}\n- Bought Tickets: {BoughtTickets}\n- Time Played: {Math.Round(CurrentTime.TotalMinutes,2)} Minutes\n- Games Played: {_gamesPlayed.Count}"; }
-                public List<EmbedBuilder> ShowGames(int list_games = Int32.MinValue)
-                {
-                    List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
-                    string gamelist = "";
-                    if (list_games == Int32.MinValue)
-                    {
-                        int totalPages = _gamesPlayed.Count()/5 + (_gamesPlayed.Count%5 == 0 ? 0:1);
-                        for (int i = 0; i < _gamesPlayed.Count(); ++i)
-                        {
-                            gamelist += (_gamesPlayed[i].ToString() + "\n\n");
-                            if ((i + 1) % 5 == 0)
-                            {
-                                embedlist.Add(new EmbedBuilder().WithColor(Color.Blue).WithTitle("Your Games").WithDescription(gamelist));
-                                gamelist = "";
-                            }
-                        }
-                        if (!string.IsNullOrEmpty(gamelist))
-                            embedlist.Add(new EmbedBuilder().WithColor(Color.Blue).WithTitle("Your Games").WithDescription(gamelist));
-                    }
-                    else
-                    {
-                        gamelist += _gamesPlayed.FirstOrDefault(game => game.Data.Id == list_games)!.ToString() ?? throw new Exception("Cannot find game");
-                        embedlist.Add(new EmbedBuilder().WithColor(Color.Blue).WithFooter("Page 1/1").WithCurrentTimestamp().WithTitle("Found Game").WithDescription(gamelist));
-                    }
-                    //return gamelist;
-                    return embedlist;
-                }
-                public List<EmbedBuilder> ShowAchievements(bool showAll = false, string? name = null)
-                {
-                    List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
-                    string achievementlist = "";
-
-                    if(String.IsNullOrEmpty(name))
-                    {
-                        if(showAll)
-                        {
-                            int totalPages = DefaultAchievements.Count/5 + (DefaultAchievements.Count%5 == 0 ? 0:1);
-                            for (int i = 0; i < DefaultAchievements.Count; ++i)
-                            {
-                                achievementlist += $"{DefaultAchievements[i]}\nClaimed: {_achievementsClaimed.Contains(DefaultAchievements[i].Data.Name)}\n\n";
-                                if ((i + 1) % 5 == 0)
-                                {
-                                    embedlist.Add((new EmbedBuilder().WithColor(Color.Blue).WithTitle("List of Achievements").WithDescription(achievementlist)));
-                                    achievementlist = "";
-                                }
-                            }
-                            if (!string.IsNullOrEmpty(achievementlist))
-                                embedlist.Add(new EmbedBuilder().WithColor(Color.Blue).WithTitle("List of Achievements").WithDescription(achievementlist)); 
-                        }
-                        else
-                        {
-                            int totalPages = Achievements.Count/5 + (Achievements.Count%5 == 0 ? 0:1);
-                            for (int i = 0; i < Achievements.Count; ++i)
-                            {
-                                achievementlist += $"{Achievements[i]}\n\n";
-                                if ((i + 1) % 5 == 0)
-                                {
-                                    embedlist.Add((new EmbedBuilder().WithColor(Color.Blue).WithTitle("Your Achievements").WithDescription(achievementlist)));
-                                    achievementlist = "";
-                                }
-                            }
-                            if (!string.IsNullOrEmpty(achievementlist))
-                                embedlist.Add((new EmbedBuilder().WithColor(Color.Blue).WithTitle("Your Achievements").WithDescription(achievementlist)));
-                        }
-                    }
-                    else
-                    {
-                        achievementlist += Achievements.FirstOrDefault(achievement => achievement.Data.Name == name)!.ToString() ?? throw new ArgumentException("Achievement Not Found");
-                        embedlist.Add((new EmbedBuilder().WithColor(Color.Blue).WithFooter("Page 1/1").WithCurrentTimestamp().WithTitle("Achievement Found").WithDescription(achievementlist)));
-                    }
                     
-                    return embedlist;
+                    return achievementName;
+                    
+                }
+                public string UnclaimAchievement(string achievementName) 
+                {
+                    if(_achievementsClaimed.Remove(achievementName))
+                        return achievementName;
+                    else
+                        throw new Exception("Achievement not found");
+                }   
+                ///Accessors
+                public List<Game> GamesPlayed => _gamesPlayed;
+                public uint TotalPoints => (uint)(_gamesPlayed.Select(game => game.XpValue).Sum() + DefaultAchievements.Where(achievement => _achievementsClaimed.Contains(achievement.Data.Name)).Select(achievement => achievement.Data.XpValue).Sum());
+                public override string ToString() => $"__**{DiscordUser.Username}**__\n- PID: {Pid}\n- Points: {CurrentPoints}\n- Claimed Raffle: {IsRaffleWinner}\n- Bought Tickets: {BoughtTickets}";
+                public EmbedBuilder[] ShowGames()
+                {
+                    List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
+
+                    for (int i = 0; i < _gamesPlayed.Count; i++)
+                        embedlist.Add(new EmbedBuilder().WithDescription(_gamesPlayed[i].ToString()));
+                    
+                    return embedlist.ToArray();
+                }
+                public EmbedBuilder[] ShowAchievements(bool showAll = false)
+                {
+                    List<EmbedBuilder> embedlist = new List<EmbedBuilder>();
+
+                    Achievement[] achievements = (showAll ? DefaultAchievements : DefaultAchievements.Where(a => _achievementsClaimed.Contains(a.Data.Name))).ToArray();
+
+                    for (int i = 0; i < achievements.Length; i++)
+                        embedlist.Add(new EmbedBuilder().WithDescription(achievements[i].ToString()));
+
+                    return embedlist.ToArray();
                 }
 
                 ///Operators
-                public static bool operator >(User a, User b) => a.TotalPoints() > b.TotalPoints();
-                public static bool operator <(User a, User b) => a.TotalPoints() < b.TotalPoints();
-                public static implicit operator UserData(User u) => new UserData(u.DiscordUser.Id, u.Pid, u.GamesPlayed.Select(g => (GameData)g).ToArray(), u.IsRaffleWinner, u._achievementsClaimed.ToArray(), u.NumberGamesPlayed, u.BoughtTickets, u.StartTime);
-                public static implicit operator User(UserData u) => new User(u.DiscordId, u.PID, u.GamesPlayed.Select(g => (Game)g).ToList(), u.WonRaffle, u.NumberGamesPlayed, u.AchievementsClaimed.ToList(), u.Tickets, u.Start);
+                public static bool operator >(User a, User b) => a.TotalPoints > b.TotalPoints;
+                public static bool operator <(User a, User b) => a.TotalPoints < b.TotalPoints;
+                public static implicit operator UserData(User u) => new UserData(u.DiscordUser.Id, u.Pid, u.GamesPlayed.Select(g => (GameData)g).ToArray(), u.IsRaffleWinner, u._achievementsClaimed.ToArray(), u.NumberGamesPlayed, u.BoughtTickets);
+                public static implicit operator User(UserData u) => new User(u.DiscordId, u.PID, u.GamesPlayed.Select(g => (Game)g).ToList(), u.WonRaffle, u.NumberGamesPlayed, u.AchievementsClaimed.ToList());
             }
-            public struct UserData
+            private struct UserData
             {
                 public ulong DiscordId;
                 public string PID;
                 public GameData[] GamesPlayed;
                 public bool WonRaffle;
-                public String[] AchievementsClaimed;
+                public string[] AchievementsClaimed;
                 public ushort NumberGamesPlayed;
-                public int Tickets;
-                public DateTime Start;
+                public uint Tickets;
 
-                public UserData(ulong discordId, string pID, GameData[] gamesPlayed, bool wonRaffle, string[] achievementsClaimed, ushort numberGamesPlayed, int tickets, DateTime start)
+                public UserData(ulong discordId, string pID, GameData[] gamesPlayed, bool wonRaffle, string[] achievementsClaimed, ushort numberGamesPlayed, uint tickets)
                 {
                     DiscordId = discordId;
                     PID = pID;
@@ -310,15 +131,50 @@ namespace TableTopBot
                     AchievementsClaimed = achievementsClaimed;
                     NumberGamesPlayed = numberGamesPlayed;
                     Tickets = tickets;
-                    Start = start;
                 }
             }
+            private readonly List<User> Users;
+            public void AddNewUser(SocketUser addedUser, string pid)
+            {
+                ///Validate PID
+                if (pid[0] != 'P' || pid.Length != 10 || !int.TryParse(pid[1..9], out int value))
+                    throw new InvalidDataException(message: "Invalid PID.");
+                for (int i = 1; i < 10; i++)
+                    if (pid[i] < '0' || pid[i] > '9')
+                        throw new InvalidDataException(message: "Invalid PID.");
+                if (Users.Any(user => user.DiscordUser.Id == addedUser.Id))
+                    throw new InvalidDataException(message: "User is already registered.");
+                Users.Add(new User(addedUser, pid));
+                Save();
+            }
+            public void RemoveUser(ulong discordId)
+            {
+                Users.RemoveAll(user => user.DiscordUser.Id == discordId);
+                Save();
+            }
+            public string GetUser(ulong discordId) => (Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.")).ToString();
+            public string GetTopXUsersString(int x, bool mention = false)
+            {
+                Users.Sort();
+                int i = 0;
+                return string.Join('\n', Users.Take(x > Users.Count ? Users.Count : x).ToList().Select(u => $"{++i}: {(mention ? u.DiscordUser.Mention : Server.GetUser(u.DiscordUser.Id).DisplayName)} - {u.CurrentPoints}"));
+            }
+            public void UserBuyTickets(ulong discordId, uint x = 1)
+            {
+                User u = Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.");
+                if (u.TotalPoints < PrivateVariables.TicketThresholds[PrivateVariables.TicketThresholds.Length - 1])
+                    throw new Exception($"Error: User did not reach point threshold of {PrivateVariables.TicketThresholds[PrivateVariables.TicketThresholds.Length - 1]}");
+                else if (x * PrivateVariables.TicketValue > u.CurrentPoints)
+                    throw new Exception($"Error: User does not have enough points. Tickets cost {PrivateVariables.TicketValue} points each.");
+                u.BoughtTickets += x;
+                Save();
+            } 
+            public EmbedBuilder[] GetUserGames(ulong discordId) => (Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.")).ShowGames();
+            public EmbedBuilder[] GetUserAchievements(ulong discordId, bool showAll = false) => (Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.")).ShowAchievements(showAll);
+            #endregion
 
-            /**
-             * Game
-             * Stores a game for a single user
-             */
-            public class Game
+            #region Games
+            private class Game
             {
                 ///Static
                 private static readonly double PointsScale = 1.5;             ///The scale of points per minute
@@ -327,7 +183,7 @@ namespace TableTopBot
 
                 ///Variables
                 public readonly GameData Data; ///Stores the data for a game
-                public readonly int XpValue;
+                public readonly int XpValue;   ///The amount of Xp the game is worth
 
                 ///Constructor
                 public Game(string name, uint id, GameType type, uint playerCount, uint rank, uint gameLengthInMinutes) : this(new GameData(name, id, type, playerCount, rank, gameLengthInMinutes))
@@ -337,8 +193,8 @@ namespace TableTopBot
                     if (playerCount < rank)
                         throw new ArgumentException(paramName: nameof(rank), message: "rank cannot be greater than playerCount");
                 }
-                private Game(GameData data) 
-                { 
+                private Game(GameData data)
+                {
                     Data = data;
 
                     ///XP Computation
@@ -371,13 +227,13 @@ namespace TableTopBot
                 }
 
                 ///Accessors
-                public override string ToString() => $"**{Data.Name}**\n- ID: {Data.Id}\n- Game Type: {Data.Type}\n- Player Count: {Data.PlayerCount}\n- Ranking: {Data.Rank}\n- Game Length: {Data.GameLength} min\n- Points: {XpValue}\n";
+                public override string ToString() => $"__**{Data.Name}**__\n- ID: {Data.Id}\n- Game Type: {Data.Type}\n- Player Count: {Data.PlayerCount}\n- Ranking: {Data.Rank}\n- Game Length: {Data.GameLength} min\n- Points: {XpValue}\n- Played on: {Data.PlayedAt.ToString()}";
 
                 ///Operators
                 public static implicit operator GameData(Game g) => g.Data;
                 public static implicit operator Game(GameData g) => new Game(g);
             }
-            public struct GameData
+            private struct GameData
             {
                 public string Name;      ///The name of the game
                 public uint Id;          ///The id of the game
@@ -385,6 +241,7 @@ namespace TableTopBot
                 public uint PlayerCount; ///The amount of players in the game
                 public uint Rank;        ///The user's rank
                 public uint GameLength;  ///The length of the game in minutes
+                public DateTime PlayedAt;
 
                 public GameData(string name, uint id, GameType type, uint playerCount, uint rank, uint gameLength)
                 {
@@ -394,32 +251,38 @@ namespace TableTopBot
                     PlayerCount = playerCount;
                     Rank = rank;
                     GameLength = gameLength;
+                    PlayedAt = DateTime.Now;
                 }
             }
-
-            /**
-             * Achievement
-             * Stores an achivement for a single user
-             */
-            public class Achievement
+            public EmbedBuilder AddUserGame(ulong discordId, string name, uint playerCount, GameType type, uint rank, uint length)
             {
-                ///Variables
-                public readonly AchievementData Data; ///Stores the data for an achievement
-
-                ///Constructor
-                private Achievement(AchievementData data) { Data = data; }
-
-                ///Accessors
-                public override string ToString() { return $"**{Data.Name}**\n- Description: {Data.Description}\n- Points: {Data.XpValue}"; }
-
-                ///Operators
-                public static implicit operator Achievement(AchievementData a) => new Achievement(a);
+                Game gameAdded = (Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.")).AddGame(name, playerCount, type, rank, length);
+                Save();
+                return new EmbedBuilder().WithDescription(gameAdded.ToString());
             }
-            public struct AchievementData
+            public EmbedBuilder RemoveUserGame(ulong discordId, int gameId)
             {
-                public string Name{get;set;}        ///The name of the achievement
-                public string Description{get;set;} ///The requirements to get it
-                public int XpValue{get;set;}        ///The reward amount
+                Game gameRemoved = (Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.")).RemoveGame(gameId);
+                Save();
+                return new EmbedBuilder().WithDescription(gameRemoved.ToString());
+                
+            }
+            #endregion
+
+            #region Achievements
+            private class Achievement
+            {
+                public readonly AchievementData Data; ///Stores the data for an achievement
+                private Achievement(AchievementData data) { Data = data; } ///Achievement Constructor
+                public override string ToString() => $"__**{Data.Name}**__\n- Description: {Data.Description}\n- Points: {Data.XpValue}"; ///Turns the Achievement into a string
+
+                public static implicit operator Achievement(AchievementData a) => new Achievement(a); ///Converts data into an achievement
+            }
+            private struct AchievementData
+            {
+                public string Name { get; set; }        ///The name of the achievement
+                public string Description { get; set; } ///The requirements to get it
+                public int XpValue { get; set; }        ///The reward amount
 
                 public AchievementData(string name, string description, int xpValue)
                 {
@@ -428,1091 +291,416 @@ namespace TableTopBot
                     XpValue = xpValue;
                 }
             }
-
-            ///Psudo Const
-            public static readonly int[] TicketThresholds = new int[] { 0, 75, 300, 675, 1250 };
-            private static readonly List<Achievement> DefaultAchievements = (JsonSerializer.Deserialize<AchievementData[]>(File.ReadAllText("./Achievement.json")) ?? throw new NullReferenceException("No Data In Achievement File")).Select(a => (Achievement)a).ToList();
-            private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions { WriteIndented = true, IncludeFields = true };
-
-            ///Data
-            private readonly List<User> Users;
-            public readonly string EventName;
-            
-            public static readonly int TicketPrice = 1000;
-
-            ///Construction
-            public XpStorage(string eventName)
+            private static readonly List<Achievement> DefaultAchievements = (JsonSerializer.Deserialize<AchievementData[]>(File.ReadAllText("./Achievements.json")) ?? throw new NullReferenceException("No Data In Achievement File")).Select(a => (Achievement)a).ToList();
+            public EmbedBuilder ClaimUserAchievement(ulong discordId, string achievementName)
             {
-                EventName = eventName;
-                if (File.Exists(Path))
-                {
-                    FileStream stream = new FileStream(Path, FileMode.Open);
-                    Users = (JsonSerializer.Deserialize<UserData[]>(stream, JsonOptions) ?? new UserData[0]).Select(u => (User)u).ToList();
-                    stream.Close();
-                }
-                else Users = new List<User>();
+                string achievementClaimed = (Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.")).ClaimAchievement(achievementName);
+                Save();
+                return new EmbedBuilder().WithDescription((DefaultAchievements.Find(g => g.Data.Name == achievementClaimed) ?? throw new ArgumentException("Achievement not Found")).ToString());
             }
-            public static bool CanLoad(string eventName) { return File.Exists($"./{eventName}.json"); }
+            public EmbedBuilder UnclaimUserAchievement(ulong discordId, string achievementName)
+            {
+                string achievementUnclaimed = (Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.")).UnclaimAchievement(achievementName);
+                Save();
+                return new EmbedBuilder().WithDescription(achievementUnclaimed.ToString());
+            }
+            #endregion
 
-            ///Accessors
-            public User GetUser(ulong discordId)
-            {
-                User? u = Users.FirstOrDefault(user => user.DiscordUser.Id == discordId);
-                if (u == null)
-                    throw new NullReferenceException(message: "User not found in system.");
-                return u;
-            }
-            public List<User> GetTopXUsers(int x)
-            {
-                if (x > Users.Count)
-                    x = Users.Count;
-                    //throw new ArgumentOutOfRangeException(nameof(x), "There aren't enough users to populate the list");
-                Users.Sort();
-                return Users.Take(x).ToList();
-            }
-            private string Path { get { return $"./{EventName}.json"; } }
-
-            ///Mutators
-            public void AddNewUser(SocketUser addedUser, string pid)
-            {
-                try
-                {
-                    if (Users.Any(user => user.DiscordUser.Id == addedUser.Id))
-                        throw new InvalidDataException(message: "User is already registered.");
-                    Users.Add(new User(addedUser, pid, startTime: DateTime.Now));
-                }
-                catch { throw; }
-            }
-            public void RemoveUser(User user) => Users.Remove(user);
+            #region Raffles
             public SocketUser DrawRaffle()
             {
                 try
                 {
-                    List<User> raffleEntries = new();
-                    foreach (User user in Users.Where(user => !user.IsRaffleWinner)){
-                        raffleEntries.AddRange(TicketThresholds.Where(points => user.TotalPoints() > points).Select(_ => user));
-                        for(int i = 0; i < user.BoughtTickets; ++i)
-                            raffleEntries.Add(user);
-                    }
-
-                    if (raffleEntries.Count() <= 0)
+                    List<User> raffleEntries = new List<User>();
+                    Users.Where(user => !user.IsRaffleWinner).ToList().ForEach(user =>
+                    {
+                        raffleEntries.AddRange(PrivateVariables.TicketThresholds.Where(points => user.TotalPoints > points).Select(_ => user));
+                        for (int i = 0; i < user.BoughtTickets; ++i, raffleEntries.Add(user)) ;
+                    });
+                    if (raffleEntries.Count() == 0)
                         throw new IndexOutOfRangeException("No valid users for raffle.");
-                    Random r = new(DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond);
-                    User winner = raffleEntries[r.Next(raffleEntries.Count)];
-                    winner.IsRaffleWinner = true;
-                    
+                    Random r = new Random(DateTime.Now.Minute + DateTime.Now.Second + DateTime.Now.Millisecond);
+                    User winner = raffleEntries[r.Next(raffleEntries.Count)];                    
                     return winner.DiscordUser;
                 }
                 catch (IndexOutOfRangeException) { throw; }
                 catch { throw new Exception("Error in processing raffle"); }
 
             }
-            
-            //Lists all players and statistics
-            public string DisplayAll()
+            public void ConfirmRaffle(SocketUser winner) => (Users.FirstOrDefault(user => user.DiscordUser.Id == winner.Id) ?? throw new NullReferenceException(message: "User not found in system.")).IsRaffleWinner = true;
+            #endregion
+        }
+
+        private static class PrivateVariables
+        {
+            public static ulong CommandChannel { get; set; } = 0;
+            public static ulong AnnouncementChannel { get; set; } = 0;
+            public static ushort TicketValue { get; set; } = 0;
+            public static int[] TicketThresholds { get; set; } = new int[0];
+            public static SocketTextChannel SocketCommandChannel => Server.GetTextChannel(CommandChannel);
+            public static SocketTextChannel SocketAnnouncementChannel => Server.GetTextChannel(AnnouncementChannel);
+
+            [Start] public static void LoadVariables()
             {
-                
-                string displayAll = "List of all players: \n\n";
-                double averageTime = 0;
-                int averageGames = 0;
-                int averageXP = 0;
-                int totalUsers = Users.Count;
-                foreach(User u in Users)
-                {
-                    displayAll += $"{u.ToString()}\n";
-                    averageTime += u.CurrentTime.TotalMinutes;
-                    averageGames += u.GamesPlayed.Count;
-                    averageXP += u.TotalPoints();
-                }
-                displayAll += $"\nStatistics:\n\nAverage Time Spent: {Math.Round(averageTime/totalUsers,2)} Minutes\nAverage Number of Games Played: {averageGames/totalUsers}\nAverage Amount of XP Earned: {averageXP/totalUsers}\nTotal Attendees: {totalUsers}";
-                
-                return displayAll;
+                PV pv = JsonSerializer.Deserialize<PV>(File.ReadAllText("./XPModulePrivateVariables.json")) ?? throw new NullReferenceException("No Private Variable File Found!");
+                CommandChannel = pv.CommandChannel;
+                AnnouncementChannel = pv.AnnouncementChannel;
+                TicketValue = pv.TicketValue;
+                TicketThresholds = pv.TicketThresholds;
             }
 
-            ///Private Functions
-            public async Task Save() => await File.WriteAllTextAsync(Path, JsonSerializer.Serialize(Users.Select(u => (UserData)u), JsonOptions));
-        }
-
-        ///Variables
-        private static Func<PrivateVariable?> PrivateVariables = () => JsonSerializer.Deserialize<PrivateVariable>(File.ReadAllText("./PrivateVariables.json"));
-        public static SocketTextChannel AnnouncementChannel() => Program.Server().GetTextChannel(PrivateVariables.Invoke()!.AnnouncementChannel);
-        public static SocketTextChannel CommandChannel() => Program.Server().GetTextChannel(PrivateVariables.Invoke()!.CommandChannel);
-        public XpStorage? xpSystem;
-        public XPModule(Program _bot) : base(_bot) { }
-
-        ///Constructor
-        public override Task InitilizeModule()
-        {
-            Bot.AddConnectedCallback(async () =>
+            private class PV
             {
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "help",
-                    description = "show all commands available and explain them in detail",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        try
-                        {
-                            
-                            SocketGuildUser user = (SocketGuildUser) _command.User;
-                            string? showCommand = null;
-                            foreach (SocketSlashCommandDataOption? option in _command.Data.Options)
-                            {
-                                if (option is null)
-                                    continue;
-                                showCommand = (string) option.Value;
-                            }
-                            
-                            if(String.IsNullOrEmpty(showCommand))
-                            {
-                                await _command.RespondAsync(embed: HelpListBuilder.Invoke().WithColor(Color.Red).Build(), ephemeral: true);
-                            }
-                            else
-                            {
-                                EmbedBuilder commandFound = HelpListExpandedBuilder.Invoke().Find(e => e.Item1 == (string) _command.Data.Options.First().Value )!.Item2 ?? throw new Exception("Command does not exist");
-                                
-                                await _command.RespondAsync(embed: commandFound.WithColor(Color.Red).Build(), ephemeral: true);
-                            }                 
-
-                        }
-                        catch { throw; }
-                    },
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "command",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "provide more details about given comand",
-                            IsRequired = false,
-                        }
-                            .AddChoice("join-event", "join-event")
-                            .AddChoice("leave-event", "leave-event")
-                            .AddChoice("see-self", "see-self")
-                            .AddChoice("add-game","add-game")
-                            .AddChoice("remove-game", "remove-game")
-                            .AddChoice("see-games","see-games")
-                            .AddChoice("add-achievement", "add-achievement")
-                            .AddChoice("remove-achievement", "remove-achievement")
-                            .AddChoice("see-achievements", "see-achievements")
-                            .AddChoice("buy-tickets", "buy-tickets")
-                            .AddChoice("show-x-users", "show-x-users")
-                            .AddChoice("start-event", "start-event")
-                            .AddChoice("end-event", "end-event")
-                            .AddChoice("draw-raffle", "draw-raffle")
-                            .AddChoice("see-player", "see-player")
-                            .AddChoice("see-player-games", "see-player-games")
-                            .AddChoice("see-player-achievements", "see-player-achievements")
-                            .AddChoice("remove-player", "remove-player")
-                            .AddChoice("remove-player-game", "remove-player-game")
-                            .AddChoice("remove-player-achievement", "remove-player-achievement"),
-                            
-                            
-                    },
-                });
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "set-up",
-                    description = "sets up the bot for use in the server",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        try
-                        {
-                            await Program.SetUp(_command);
-                        }
-                        catch
-                        {
-                            throw;
-                        }
-                    },
-                    modOnly = true,
-                    adminOnly = true,
-                    
-                });
-                /**
-                 * start-event
-                 * Starts the event after confirmation, takes in 
-                 * an event name and will refrence the directory to 
-                 * see if the event needs loaded from a crash state.
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "start-event",
-                    description = "starts the all-day event.",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has not started
-                        if (xpSystem != null)
-                            throw new Exception("Error: No event currently running.");
-
-                        ///Adds permissions for everyone to input commands
-                        //*note* uncomment next line when publishing
-                        //await CommandChannel().AddPermissionOverwriteAsync(Bot.Server().EveryoneRole, OverwritePermissions.DenyAll(CommandChannel()).Modify(viewChannel: PermValue.Allow, useApplicationCommands: PermValue.Allow, sendMessages: PermValue.Allow));
-
-                        ///Parses the event name
-                        string eventName = (string)_command.Data.Options.First().Value;
-
-                        ///Creates the event
-                        xpSystem = new XpStorage(eventName);
-
-                        ///Checks if the event was loaded and gives appropriate response
-                        if (XpStorage.CanLoad(eventName))
-                            await AnnouncementChannel().SendMessageAsync(text: $"@everyone Thank you for your patience, the event is back up and running!");
-                        else
-                            await AnnouncementChannel().SendMessageAsync(text: $"@everyone Welcome to {xpSystem.EventName}!\nLook to this channel for future updates and visit the {CommandChannel().Mention} channel to register youself to this event! (/join-event)\n**Disclaimer**: you need to be a current student at Ohio University and be at the event to recieve any prizes");
-                        
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully started the event."; });
-                    },
-                    modOnly = true,
-                    requiresConfirmation = true,
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "event-name",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "name of the event",
-                            IsRequired = true,
-                        },
-                    }
-                });
-                /**
-                 * end-event
-                 * Ends the current event after confirmation and
-                 * displays information about the event in the 
-                 * announcements channel *note* does not clear 
-                 * event so admins can still call functions
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "end-event",
-                    description = "ends the all-day event.",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        ///Sets user permissions for the command channel back to default
-                        await CommandChannel().AddPermissionOverwriteAsync(Program.Server().EveryoneRole, OverwritePermissions.DenyAll(CommandChannel()));
-
-                        ///Get Data
-                        List<XpStorage.User> top = xpSystem.GetTopXUsers(3);
-                        string temp = "";
-                        for(int i = 0; i < 3 && i < top.Count; ++i)
-                        {
-                            temp += $"\n{i+1}: {top[i].DiscordUser.Mention} - {top[i].CurrentPoints()} points\n";
-                        }
-                        ///Logs the end of all day message
-                        //*note* could display overall statistics for the all-day as well
-                        await AnnouncementChannel().SendMessageAsync(text: $"@everyone Thank you all for participating in {xpSystem.EventName}!\nWe hope you all had fun, here are the results: {temp} \nOnce again thank you all for showing up and we hope to see you at our next event!");
-                        
-                        await AnnouncementChannel().SendMessageAsync(text: xpSystem.DisplayAll());
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        xpSystem = null;
-                        ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully ended the event."; });
-                    },
-                    modOnly = true,
-                    requiresConfirmation = true,
-                });
-                /**
-                 * draw-raffle
-                 * Draws a raffle ticket after confirmation
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "draw-raffle",
-                    description = "draws a raffle ticket",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Displays a message notifying everyone of a raffle being drawn
-                            //*note* Doesn't notify officers before announcing the raffle (need to ask if this needs changed)
-                            await AnnouncementChannel().SendMessageAsync(text: $"@everyone Congratulations to {xpSystem.DrawRaffle().Mention} for winning the raffle!\nMake sure to contact an officer to redeem your prize.");
-                        }
-                        catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully drew a raffle."; });
-                    },
-                    modOnly = true,
-                    requiresConfirmation = true,
-                });
-                /**
-                 * see-player
-                 * Shows all data of a player including private info
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "see-player",
-                    description = "view a player's profile",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        XpStorage.User user = xpSystem.GetUser( ((SocketUser) _command.Data.Options.First().Value).Id);
-                        ///Responds with an ephemeral embed of the info
-                        //*note* this will be ephemeral, and will show private data
-                        await _command.RespondAsync(embed: (new EmbedBuilder().WithTitle($"{user.DiscordUser.Username}'s Data").WithDescription(user.ToString()))
-                        .WithFooter("Page 1/1").WithColor(Color.Blue).WithCurrentTimestamp().Build(), ephemeral: true);
-                    },
-                    modOnly = true,
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "player",
-                            Type = ApplicationCommandOptionType.User,
-                            Description = "the user to see",
-                            IsRequired = true,
-                        },
-                    }
-                });
-                /**
-                 * see-player-games
-                 * show all games of a specified user
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "see-player-games",
-                    description = "views a player's completed games",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Gets users
-                            XpStorage.User user = xpSystem.GetUser(((SocketUser) _command.Data.Options.First().Value).Id);
-                            XpStorage.User adminUser = xpSystem.GetUser(_command.User.Id);
-                            
-                            ///Gets data and creates embed
-                            List<EmbedBuilder> gamelist = user.ShowGames();
-                            
-                            foreach(EmbedBuilder g in gamelist)
-                                g.WithTitle($"{user.DiscordUser.Username}'s Games");
-                            
-                            
-                            ///Sets up MultiPageEmbed
-                            adminUser.PageEmbed = new MultiPageEmbed(gamelist);
-                            
-                            ///Display's games
-                            await adminUser.PageEmbed.StartPage(_command);
-                        }
-                        catch { throw; }
-                    },
-                    modOnly = true,
-                    options = new List<SlashCommandOptionBuilder>(){
-                        new SlashCommandOptionBuilder(){
-                            Name = "player",
-                            Type = ApplicationCommandOptionType.User,
-                            Description = "the user to be checked",
-                            IsRequired = true,
-                        }
-                    }
-                });
-                
-                /**
-                 * see-player-achievements
-                 * show all achievements of a specified user
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "see-player-achievements",
-                    description = "views a player's claimed achievements",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Gets data
-                            XpStorage.User user = xpSystem.GetUser( ((SocketUser) _command.Data.Options.First().Value).Id);
-                            XpStorage.User adminUser = xpSystem.GetUser(_command.User.Id);
-                            List<EmbedBuilder> achievementlist = new List<EmbedBuilder>();
-
-                            ///Create embed
-                            achievementlist = user.ShowAchievements(showAll: false);
-                            
-                            foreach(EmbedBuilder g in achievementlist)
-                                g.WithTitle($"{user.DiscordUser.Username}'s Achievements");
-                                
-                            ///Display achievements
-                            adminUser.PageEmbed = new MultiPageEmbed(achievementlist);
-                            await adminUser.PageEmbed.StartPage(_command);
-                        }
-                        catch { throw; }
-                    },
-                    modOnly = true,
-                    options = new List<SlashCommandOptionBuilder>(){
-                        new SlashCommandOptionBuilder(){
-                            Name = "player",
-                            Type = ApplicationCommandOptionType.User,
-                            Description = "the user to be checked",
-                            IsRequired = true,
-                        }
-                    }
-                });
-                
-                /**
-                 * show-x-users
-                 * shows an ephemeral leaderboard of the top x 
-                 * users and displays private information
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "show-x-users",
-                    description = "shows a leaderboard of top x users",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Gets X
-                            int numberOfUsers = Convert.ToInt32(_command.Data.Options.First().Value);
-
-                            ///Format the string
-                            List<XpStorage.User> top = xpSystem.GetTopXUsers(numberOfUsers);
-                            string output = "";
-                            for (int i = 0; i < top.Count; i++)
-                                output = string.Join(output, $"{i+1}: {top[i].DiscordUser.Username} - {top[i].CurrentPoints()}");
-
-                            ///Displays the leaderboard
-                            await _command.RespondAsync(embed: new EmbedBuilder().WithTitle($"Top {top.Count} Users").WithDescription(output)
-                            .WithColor(Color.Red).WithFooter("Page 1/1").WithCurrentTimestamp().Build(), ephemeral: true);
-                        }
-                        catch { throw; }
-                    },
-                    modOnly = true,
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "number",
-                            Type = ApplicationCommandOptionType.Integer,
-                            Description = "the number of users to see",
-                            IsRequired = true,
-                        },
-                    }
-                });
-                /**
-                 * remove-player-game
-                 * Removes a game from a specific player after
-                 * confirmation *warnning* only do this if a 
-                 * descrepancy is found
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "remove-player-game",
-                    description = "removes a game from a player's profile",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Get the information
-                            int gameId = Convert.ToInt32(_command.Data.Options.ElementAt(1).Value);
-                            XpStorage.User user = xpSystem.GetUser(((SocketUser)_command.Data.Options.First().Value).Id);
-
-                            ///Remove the game
-                            user.RemoveGame(gameId);
-                            ///Saves changes
-                            await xpSystem.Save();
-
-                            ///User Feedback
-                            await _command.ModifyOriginalResponseAsync(m => {m.Components = null; m.Embed = new EmbedBuilder().WithDescription("Successfully removed game.")
-                            .WithCurrentTimestamp().WithFooter("Page 1/1").WithColor(Color.Blue).WithImageUrl(user.DiscordUser.GetAvatarUrl()).Build(); });
-                        }
-                        catch { throw; }
-                    },
-                    modOnly = true,
-                    requiresConfirmation = true,
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "player",
-                            Type = ApplicationCommandOptionType.User,
-                            Description = "the user to remove a game from",
-                            IsRequired = true,
-                        },
-                        new SlashCommandOptionBuilder(){
-                            Name = "id",
-                            Type = ApplicationCommandOptionType.Integer,
-                            Description = "the game's id",
-                            IsRequired = true,
-                        },
-                    },
-                });
-                /**
-                 * remove-player-achievement
-                 * Removes an achievement from a specific player
-                 * after confirmation *warning* only do this if
-                 * a descrepancy is found
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "remove-player-achievement",
-                    description = "removes an achievement from a player's profile",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Get the information
-                            string achievementName = (string)_command.Data.Options.ElementAt(1).Value;
-                            XpStorage.User user = xpSystem.GetUser(((SocketUser)_command.Data.Options.First().Value).Id);
-
-                            ///remove achievement
-                            user.UnclaimAchievement(achievementName);
-                        }
-                        catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed achievement."; });
-                    },
-                    modOnly = true,
-                    requiresConfirmation = true,
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder() {
-                            Name = "player",
-                            Type = ApplicationCommandOptionType.User,
-                            Description = "the user to remove an achievement from",
-                            IsRequired = true,
-                        },
-                        new SlashCommandOptionBuilder(){
-                            Name = "name",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "the achievement's name",
-                            IsRequired = true,
-                        },
-                    },
-                });
-                /**
-                 * remove-player
-                 * Removes a player from the event *warning* only 
-                 * do this if a descrepancy is found
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "remove-player",
-                    description = "removes a player's profile",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Get user
-                            XpStorage.User user = xpSystem.GetUser(((SocketUser)_command.Data.Options.First().Value).Id);
-
-                            ///Remove user
-                            xpSystem.RemoveUser(user);
-                        }
-                        catch
-                        {
-                            ///Throw error if user is not found
-                            throw new NullReferenceException($"User {((SocketUser)_command.Data.Options.First().Value).Username} not found in the system.");
-                        }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed player."; });
-                    },
-                    modOnly = true,
-                    requiresConfirmation = true,
-                    options = new List<SlashCommandOptionBuilder>(){
-                        new SlashCommandOptionBuilder(){
-                            Name = "player",
-                            Type = ApplicationCommandOptionType.User,
-                            Description = "the user to remove",
-                            IsRequired = true,
-                        },
-                    },
-                });
-                /**
-                 * join-event
-                 * Adds the caller to the event, requires a valid
-                 * PID. *note* must be a current Ohio University
-                 * student and at the in person event to recieve 
-                 * prizes
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "join-event",
-                    description = "registers you for the current event",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Gets PID
-                            string PID = ((string)_command.Data.Options.First().Value).ToUpper();
-
-                            ///Validates PID
-                            if (PID[0] != 'P' || PID.Length != 10 || !int.TryParse(PID[1..9], out int value))
-                                throw new InvalidDataException(message: "Invalid PID.");
-                            for (int i = 1; i < 10; i++)
-                                if (PID[i] < '0' || PID[i] > '9')
-                                    throw new InvalidDataException(message: "Invalid PID.");
-
-                            ///Adds the user
-                            xpSystem.AddNewUser(_command.User, PID);
-                        }
-                        catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.RespondAsync(text: "Successfully joined event.", ephemeral: true);
-                    },
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "pid",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "your PID",
-                            IsRequired = true,
-                        },
-                    },
-                });
-                /**
-                 * leave-event
-                 * Unregisters the caller from the current event 
-                 * after confirmation
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "leave-event",
-                    description = "unregisters you from the current event",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Removes user
-                            xpSystem.RemoveUser(xpSystem.GetUser(_command.User.Id));
-                        }
-                        catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully left event."; });
-                    },
-                    requiresConfirmation = true,
-                });
-                /**
-                 * see-self
-                 * Shows the caller's private information
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "see-self",
-                    description = "shows you your stats",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Shows the caller's information
-                            await _command.RespondAsync(embed: new EmbedBuilder().WithTitle("Your Data").WithDescription(xpSystem.GetUser(_command.User.Id).ToString())
-                            .WithColor(Color.Blue).WithFooter("Page 1/1").WithCurrentTimestamp().Build(), ephemeral: true);
-                        }
-                        catch { throw; }
-                    },
-                });
-                /**
-                 * add-game
-                 * Adds a game to the caller's profile
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "add-game",
-                    description = "adds a game to your profile",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Get game data
-                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
-                            string gameName = (string)_command.Data.Options.First().Value;
-                            uint playerCount = Convert.ToUInt32(_command.Data.Options.ElementAt(1).Value);
-                            GameType type = (_command.Data.Options.ElementAt(2).Value as string) switch
-                            {
-                                "ranked" => GameType.Ranked,
-                                "coop" => GameType.CoOp,
-                                "teams" => GameType.Teams,
-                                "party" => GameType.Party,
-                                _ =>
-                                throw new InvalidDataException(message: "Invalid Game Type.")
-                            };
-                            uint rank = Convert.ToUInt32(_command.Data.Options.ElementAt(3).Value);
-                            uint time = Convert.ToUInt32(_command.Data.Options.ElementAt(4).Value);
-
-                            ///Adds the game
-                            user.AddGame(gameName, playerCount, type, rank, time);
-                        }
-                        catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.RespondAsync(text: "Successfully added game.", ephemeral: true);
-                    },
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "name",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "the name of the game played",
-                            IsRequired = true,
-                        },
-                        new SlashCommandOptionBuilder(){
-                            Name = "player-count",
-                            Type = ApplicationCommandOptionType.Integer,
-                            Description = "the number of players/teams in the game",
-                            IsRequired = true,
-                        },
-                        new SlashCommandOptionBuilder(){
-                            Name = "type",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "one of: ranked/coop/teams/party",
-                            IsRequired = true,
-
-
-                        }
-                            .AddChoice("Ranked", "ranked")
-                            .AddChoice("Co-op", "coop")
-                            .AddChoice("Teams", "teams")
-                            .AddChoice("Party", "party")
-                        ,
-                        new SlashCommandOptionBuilder(){
-                            Name = "placing",
-                            Type = ApplicationCommandOptionType.Integer,
-                            Description = "where you or your team ranked/placed",
-                            IsRequired = true,
-
-                        },
-                        new SlashCommandOptionBuilder(){
-                            Name = "time",
-                            Type = ApplicationCommandOptionType.Integer,
-                            Description = "game length in minutes",
-                            IsRequired = true,
-                        },
-                    },
-                });
-                /**
-                 * remove-game
-                 * Removes a game from the caller's profile
-                 * after confirmation
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "remove-game",
-                    description = "removes a game from your profile",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Gets data
-                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
-                            int id = Convert.ToInt32(_command.Data.Options.First().Value);
-
-                            ///Removes the game
-                            user.RemoveGame(id);
-                        }
-                        catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed game."; });
-                    },
-                    requiresConfirmation = true,
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "id",
-                            Type = ApplicationCommandOptionType.Integer,
-                            Description = "the game's id",
-                            IsRequired = true,
-                        },
-                    },
-                });
-                /**
-                 * see-games
-                 * Show's the caller's games played
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "see-games",
-                    description = "shows your completed games",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Gets user
-                            
-                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
-                            
-                            ///Gets data and creates embed
-                            List<EmbedBuilder> gamelist = user.ShowGames();
-                            
-                            ///Sets up MultiPageEmbed
-                            user.PageEmbed = new MultiPageEmbed(gamelist);
-                            
-                            ///Display's games
-                            await user.PageEmbed.StartPage(_command);
-                        }
-                        catch { throw; }
-                    },
-                });
-                /**
-                 * add-achievement
-                 * Adds an achievement to the user's profile
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "add-achievement",
-                    description = "adds an achievement to your profile",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Gets data
-                            string achievementName = (string)_command.Data.Options.First().Value;
-                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
-
-                            ///Adds the achievement
-                            user.ClaimAchievement(achievementName);
-                        }
-                        catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.RespondAsync(text: "Successfully added achievement.", ephemeral: true);
-                    },
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "name",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "the achievement's name",
-                            IsRequired = true,
-                        },
-                    },
-                });
-                /**
-                 * remove-achievement
-                 * Removes an achievement from the user's profile
-                 * after confirmation
-                 */
-                 
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "remove-achievement",
-                    description = "removes an achievement from your profile",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Get data
-                            string achievementName = (string)_command.Data.Options.First().Value;
-                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
-
-                            ///Remove achievement
-                            user.UnclaimAchievement(achievementName);
-                        }
-                        catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed achievement."; });
-                    },
-                    requiresConfirmation = true,
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "name",
-                            Type = ApplicationCommandOptionType.String,
-                            Description = "the achievement's name",
-                            IsRequired = true,
-                        },
-                    },
-                });
-                /**
-                 * see-achievements
-                 * Shows a multi-page-embed of the caller's achievements
-                 */
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "see-achievements",
-                    description = "shows achievements you have completed or all available achievements",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Gets data
-                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
-                            List<EmbedBuilder> achievementlist = new List<EmbedBuilder>();
-                            bool isShowAll = true;
-                            string? achievementName = null;
-
-                            ///Get selected achievements
-                            foreach (SocketSlashCommandDataOption? option in _command.Data.Options)
-                            {
-                                if (option is null)
-                                    continue;
-                                switch (option.Name)
-                                {
-                                    ///true: will show all possible achievements | false: will show completed achievements
-                                    case "show-all":
-                                        isShowAll = (bool)option.Value;
-                                        break;
-                                    ///if name is specified and show-all is false, then will show a specified achievement
-                                    case "name":
-                                        achievementName = (string)option.Value;
-                                        break;
-                                }
-                            }
-                            ///Create embed
-                            achievementlist = user.ShowAchievements(showAll: isShowAll, name: achievementName);
-
-                            ///Display achievements
-                            user.PageEmbed = new MultiPageEmbed(achievementlist);
-                            await user.PageEmbed.StartPage(_command);
-                        }
-                        catch { throw; }
-                    },
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "show-all",
-                            Type = ApplicationCommandOptionType.Boolean,
-                            Description = "True: shows all achievements | False: shows your completed achievements",
-                        },
-                        new SlashCommandOptionBuilder(){
-                          Name = "name",
-                          Type = ApplicationCommandOptionType.String,
-                          Description = "name of achievement",
-                        },
-                    },
-                });
-                
-                await Bot.AddCommand(new Program.Command()
-                {
-                    name = "buy-tickets",
-                    description = "buy tickets and add them to your profile",
-                    callback = async (SocketSlashCommand _command) =>
-                    {
-                        ///Checks if the event has started
-                        if (xpSystem == null)
-                            throw new Exception("Error: No event currently running.");
-
-                        try
-                        {
-                            ///Get the information
-                            int ticketsBought = Convert.ToInt32(_command.Data.Options.First().Value);
-                            XpStorage.User user = xpSystem.GetUser(_command.User.Id);
-                            if (user.TotalPoints() < 1250)
-                            {
-                                throw new Exception("Error: User did not reach point threshold of 1250");
-                            }
-                            else if ((ticketsBought * XpStorage.TicketPrice) > user.TotalPoints())
-                            {
-                                throw new Exception($"Error: User does not have enough points. Tickets cost {XpStorage.TicketPrice} points each.");
-                            }
-                            user.BoughtTickets += ticketsBought;
-                            
-
-                        }
-                        catch { throw; }
-
-                        ///Saves changes
-                        await xpSystem.Save();
-
-                        ///User Feedback
-                        //await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = "Successfully removed game."; });
-                        await _command.ModifyOriginalResponseAsync(m => { m.Components = null; m.Content = $"Successfully bought {_command.Data.Options.First().Value} tickets."; });
-                    },
-                    requiresConfirmation = true,
-                    options = new List<SlashCommandOptionBuilder>() {
-                        new SlashCommandOptionBuilder(){
-                            Name = "tickets",
-                            Type = ApplicationCommandOptionType.Integer,
-                            Description = "the number of tickets to be bought",
-                            IsRequired = true,
-                        },
-                    },
-                });
-
-                ///Lets the user know when the bot is running
-                Console.WriteLine("Commands Initalized");
-            });
-            return Task.CompletedTask;
+                public ulong CommandChannel { get; set; } = 0;
+                public ulong AnnouncementChannel { get; set; } = 0;
+                public ushort TicketValue { get; set; } = 0;
+                public int[] TicketThresholds { get; set; } = new int[0];
+            }
         }
+
+        private static XpStorage? xpSystem;
+
+        #region Commands
+        [Command(description: "Creates a new or existing event based on the name given.", modOnly: true)]
+        [Option(name: "event-name", type: ApplicationCommandOptionType.String, description: "Name of the event to run, will load an event of the same name.", isRequired: true)]
+        public static async Task StartEvent(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem != null)
+                throw new Exception("Error: Event currently running.");
+
+            await Respond(_command, buttons: new Button[] { new Button(async (SocketSlashCommand _command, SocketMessageComponent _component) =>
+            {
+                ///Adds permissions for everyone to input commands
+                //*note* uncomment next line when publishing
+                //await PrivateVariables.SocketCommandChannel.AddPermissionOverwriteAsync(Server.EveryoneRole, OverwritePermissions.DenyAll(PrivateVariables.SocketCommandChannel).Modify(viewChannel: PermValue.Allow, useApplicationCommands: PermValue.Allow, sendMessages: PermValue.Allow));
+
+                ///Parses the event name
+                string eventName = (string)_command.Data.Options.First().Value;
+
+                ///Check if the event needs loaded
+                bool canLoad = XpStorage.CanLoad(eventName);
+
+                ///Creates the event
+                xpSystem = new XpStorage(eventName);
+
+                //readd the @ before everyone
+                ///Checks if the event was loaded and gives appropriate response
+                await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: canLoad ? $"everyone Thank you for your patience, the event is back up and running!" : $"@everyone Welcome to {xpSystem.EventName}!\nLook to this channel for future updates and visit the {PrivateVariables.SocketCommandChannel.Mention} channel to register youself to this event! (/join-event)\n**Disclaimer**: you need to be a current student at Ohio University and be at the event to recieve any prizes");
+
+                ///User Feedback
+                await Respond(_command, text: "Successfully started the event.");
+            }, "Confirm", ButtonStyle.Danger) });
+        }
+
+        [Command(description: "Ends the current event, displaying all of the event's statistics in the announcement channel.", modOnly: true)]
+        public static async Task EndEvent(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            await Respond(_command, buttons: new Button[] { new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
+                ///Sets user permissions for the command channel back to default
+                await PrivateVariables.SocketCommandChannel.AddPermissionOverwriteAsync(Server.EveryoneRole, OverwritePermissions.DenyAll(PrivateVariables.SocketCommandChannel));
+
+                ///Logs the end of all day message
+                await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: $"@everyone Thank you all for participating in {xpSystem.EventName}!\nWe hope you all had fun, here are the results:\n {xpSystem.GetTopXUsersString(3, true)}\nHere are some statistics for today's event:\n{xpSystem.DisplayAll()}\n\nOnce again thank you all for showing up and we hope to see you at our next event!");
+
+                ///User Feedback
+                await Respond(_command, text: "Successfully ended the event.");
+                xpSystem = null;
+            }, "Confirm", ButtonStyle.Danger) });
+        }
+
+        [Command(description: "Draws a raffle winner from the pool of current users, odds increase with additional tickets.", modOnly: true)]
+        public static async Task DrawRaffle(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            await Respond(_command, buttons: new Button[] { new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
+                SocketUser winner = xpSystem.DrawRaffle();
+
+                ///Mod Confirmation
+                await Respond(_command, text: $"Winner: {Server.GetUser(winner.Id).Nickname}", buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
+                    xpSystem.ConfirmRaffle(winner);
+
+                    ///Displays a message notifying everyone of a raffle being drawn
+                    await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: $"@everyone Congratulations to {winner.Mention} for winning the raffle!\nMake sure to contact an officer to redeem your prize.");
+
+                    ///User Feedback
+                    await Respond(_command, text: "Successfully drew a raffle.");
+                })});
+            }, "Confirm", ButtonStyle.Danger)});
+        }
+
+        [Command(description: "Checks a user's profile, listing their general statistics.", modOnly: true)]
+        [Option(name: "user", type: ApplicationCommandOptionType.User, description: "The user to check the stats of.", isRequired: true)]
+        public static async Task SeeUser(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Responds with an ephemeral embed of the info
+            await Respond(_command, embed: new EmbedBuilder().WithTitle("Player Data").WithDescription(xpSystem.GetUser(((SocketUser)_command.Data.Options.First().Value).Id)).WithColor(Color.Red).Build());
+        }
+
+        [Command(description: "Checks a user's completed games, and their asociated statistics.", modOnly: true)]
+        [Option(name: "user", type: ApplicationCommandOptionType.User, description: "The user to check the games of.", isRequired: true)]
+        public static async Task SeeUserGames(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Creates a recursive embed
+            await CreateRecursiveMuliPageEmbed(_command, xpSystem.GetUserGames(((SocketUser)_command.Data.Options.First().Value).Id), $"{((SocketUser)_command.Data.Options.First().Value).Username}'s Games", color: Color.Red);
+        }
+
+        [Command(description: "Checks a user's completed achievements.", modOnly: true)]
+        [Option(name: "user", type: ApplicationCommandOptionType.User, description: "The user to check the achievements of.", isRequired: true)]
+        public static async Task SeeUserAchievements(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Creates a recursive embed
+            await CreateRecursiveMuliPageEmbed(_command, xpSystem.GetUserAchievements(((SocketUser)_command.Data.Options.First().Value).Id), $"{((SocketUser)_command.Data.Options.First().Value).Username}'s Achievements", color: Color.Red);
+        }
+
+        [Command(description: "Displays the top users of the current event based on the number of points they have.", modOnly: true)]
+        [Option(name: "number", type: ApplicationCommandOptionType.Integer, description: "The number of users to display.", isRequired: true)]
+        public static async Task SeeXUsers(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Gets X
+            int numberOfUsers = Convert.ToInt32(_command.Data.Options.First().Value);
+
+            ///Displays the leaderboard
+            await Respond(_command, embed: new EmbedBuilder().WithTitle($"Top {numberOfUsers} Users").WithDescription(xpSystem.GetTopXUsersString(numberOfUsers)).WithColor(Color.Orange).Build());
+        }
+
+        [Command(description: "Removes a game from a user's profile.", modOnly: true)]
+        [Option(name: "user", type: ApplicationCommandOptionType.User, description: "The user to remove the game from.", isRequired: true)]
+        [Option(name: "id", type: ApplicationCommandOptionType.Integer, description: "The ID of the game to remove from the profile.", isRequired: true)]
+        public static async Task RemoveUserGame(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {                
+                ///Remove the game
+                EmbedBuilder displayGame = xpSystem.RemoveUserGame(((SocketUser)_command.Data.Options.First().Value).Id, Convert.ToInt32(_command.Data.Options.ElementAt(1).Value));
+
+                ///User Feedback
+                await Respond(_command, embed: displayGame.WithTitle($"Successfully removed {((SocketUser)_command.Data.Options.First().Value).Username}'s game").WithColor(Color.Red).Build());
+            }, "Confirm", ButtonStyle.Danger)});
+        }
+
+        [Command(description: "Removes an achievement from a user's profile.", modOnly: true)]
+        [Option(name: "user", type: ApplicationCommandOptionType.User, description: "The user to remove the achievement from.", isRequired: true)]
+        [Option(name: "name", type: ApplicationCommandOptionType.String, description: "The name of the achievement to remove from the profile.", isRequired: true)]
+        public static async Task RemoveUserAchievement(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
+                ///Remove the achievement
+                EmbedBuilder displayAchievement = xpSystem.UnclaimUserAchievement(((SocketUser)_command.Data.Options.First().Value).Id, (string)_command.Data.Options.ElementAt(1).Value);
+
+                ///User Feedback
+                await Respond(_command, embed: displayAchievement.WithTitle($"Successfully removed {((SocketUser)_command.Data.Options.First().Value).Username}'s achievement").WithColor(Color.Red).Build());
+            }, "Confirm", ButtonStyle.Danger)});
+        }
+
+        [Command(description: "Removes a user's profile from the event, *Warning* this removes all of their data.", modOnly: true)]
+        [Option(name: "user", type: ApplicationCommandOptionType.User, description: "The user to remove from the event.", isRequired: true)]
+        public static async Task RemoveUser(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
+                ///Remove user
+                xpSystem.RemoveUser(((SocketUser)_command.Data.Options.First().Value).Id);
+
+                ///User Feedback
+                await Respond(_command, text:"Successfully removed player.");
+            }, "Confirm", ButtonStyle.Danger)});
+        }
+
+        [Command(description: "Registers you for the current event, this allows you to participate in raffles and win prizes.")]
+        [Option(name: "pid", type: ApplicationCommandOptionType.String, description: "Your Personal Identification Number given to Ohio University students (note include the 'p').", isRequired: true)]
+        public static async Task JoinEvent(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Adds the user
+            xpSystem.AddNewUser(_command.User, ((string)_command.Data.Options.First().Value).ToUpper());
+
+            ///User Feedback
+            await Respond(_command, text: "Successfully joined event.");
+        }
+
+        [Command(description: "Unregisters you from the current event, you can rejoin but you will not have any of your data.")]
+        public static async Task LeaveEvent(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
+                ///Removes user
+                xpSystem.RemoveUser(_command.User.Id);
+
+                ///User Feedback
+                await Respond(_command, text: "Successfully left event.");
+            }, "Confirm", ButtonStyle.Danger)});
+        }
+
+        [Command(description: "Shows you your statistics, PID, points earned, tickets, and more.")]
+        public static async Task SeeSelf(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Shows the caller's information
+            await Respond(_command, embed: new EmbedBuilder().WithTitle("Your Data").WithDescription(xpSystem.GetUser(_command.User.Id).ToString()).WithColor(Color.Blue).Build());
+        }
+
+        [Command(description: "Adds a game to your profile and assigns points accordingly.")]
+        [Option(name: "name", type: ApplicationCommandOptionType.String, description: "The name of the game played.", isRequired: true)]
+        [Option(name: "player-count", type: ApplicationCommandOptionType.Integer, description: "The number of players or teams in the game.", isRequired: true)]
+        [Option(name: "type", type: ApplicationCommandOptionType.String, description: "One of: ranked/coop/teams/party based on the type of game played.", isRequired: true, channelTypes: new ChannelType[0], choiceKeys: new string[] { "Ranked", "Co-op", "Teams", "Party" }, choiceValues: new string[] { "ranked", "coop", "teams", "party" })]
+        [Option(name: "placing", type: ApplicationCommandOptionType.Integer, description: "Where you ranked, teams share the same rank, for unranked games a win is 1 and a loss is 2.", isRequired: true)]
+        [Option(name: "length", type: ApplicationCommandOptionType.Integer, description: "The length of the game in minutes.", isRequired: true)]
+        public static async Task AddGame(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Get game data
+            string gameName = (string)_command.Data.Options.First().Value;
+            uint playerCount = Convert.ToUInt32(_command.Data.Options.ElementAt(1).Value);
+            GameType type = (_command.Data.Options.ElementAt(2).Value as string) switch { "ranked" => GameType.Ranked, "coop" => GameType.CoOp, "teams" => GameType.Teams, "party" => GameType.Party, _ => throw new InvalidDataException(message: "Invalid Game Type.") };
+            uint rank = Convert.ToUInt32(_command.Data.Options.ElementAt(3).Value);
+            uint time = Convert.ToUInt32(_command.Data.Options.ElementAt(4).Value);
+
+            ///Adds the game
+            EmbedBuilder displayGame = xpSystem.AddUserGame(_command.User.Id, gameName, playerCount, type, rank, time);
+
+            ///User Feedback
+            await Respond(_command, embed: displayGame.WithTitle("Successfully added game.").WithColor(Color.Blue).Build());
+        }
+
+        [Command(description: "Removes a specified game from your profile.")]
+        [Option(name: "id", type: ApplicationCommandOptionType.Integer, description: "The Id of the game to remove (can be found with see-games).", isRequired: true)]
+        public static async Task RemoveGame(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
+                ///Remove self
+                EmbedBuilder displayGame = xpSystem.RemoveUserGame(_command.User.Id, Convert.ToInt32(_command.Data.Options.First().Value));
+
+                ///User Feedback
+                await Respond(_command, embed: displayGame.WithTitle("Successfully removed game.").WithColor(Color.Blue).Build());
+            }, "Confirm", ButtonStyle.Danger) });
+        }
+
+        [Command(description: "Lists all of the games you've played.")]
+        public static async Task SeeGames(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Creates a recursive embed
+            await Interaction.CreateRecursiveMuliPageEmbed(_command, xpSystem.GetUserGames(_command.User.Id), "Your Games");
+        }
+
+        [Command(description: "Adds an achievement to your profile from the list of available achievements.")]
+        [Option(name: "name", type: ApplicationCommandOptionType.String, description: "The name of the achievement to add (can be found by using see-achievements).", isRequired: true)]
+        public static async Task AddAchievement(SocketSlashCommand _command)
+        {
+
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Adds the achievement
+            EmbedBuilder displayAchievement = xpSystem.ClaimUserAchievement(_command.User.Id, (string)_command.Data.Options.First().Value);
+
+            ///User Feedback
+            await Respond(_command, embed: displayAchievement.WithTitle("Successfully claimed achievement").WithColor(Color.Blue).Build());
+        }
+
+        [Command(description: "Unclaims an achievment from your profile.")]
+        [Option(name: "name", type: ApplicationCommandOptionType.String, description: "The name of the achievement to remove from your profile.", isRequired: true)]
+        public static async Task RemoveAchievement(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
+                ///Remove achievement
+                EmbedBuilder achievementUnclaimed = xpSystem.UnclaimUserAchievement(_command.User.Id, (string)_command.Data.Options.First().Value);
+
+                ///User Feedback
+                await Respond(_command, embed: achievementUnclaimed.WithTitle("Successfully removed achievement.").WithColor(Color.Blue).Build());
+            }, "Confirm", ButtonStyle.Danger) });
+        }
+
+        [Command(description: "Either displays all of your achievements or all possible achievements.")]
+        [Option(name: "show-all", type: ApplicationCommandOptionType.Boolean, description: "True: shows all possible achievements | False: shows your personal completed achievements.", isRequired: true)]
+        public static async Task SeeAchievements(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            ///Creates a recursive embed
+            await CreateRecursiveMuliPageEmbed(_command, xpSystem.GetUserAchievements(_command.User.Id, (bool)_command.Data.Options.First()), (bool)_command.Data.Options.First() ? "List of Achievements" : "Your Achievements");
+        }
+
+        [Command(description: "Buys a specified amount of tickets and removes points accordingly.")]
+        [Option(name: "tickets", type: ApplicationCommandOptionType.Integer, description: "The number of tickets you wish to buy.", isRequired: true)]
+        public static async Task BuyTickets(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            if (xpSystem == null)
+                throw new Exception("Error: No event currently running.");
+
+            await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
+                ///Get the information
+                int ticketsBought = Convert.ToInt32(_command.Data.Options.First().Value);
+                ulong user = _command.User.Id;
+
+                ///Buy the tickets
+                xpSystem.UserBuyTickets(user, (uint)ticketsBought);
+
+                ///User Feedback
+                await Respond(_command, text: $"Successfully bought {_command.Data.Options.First().Value} tickets.");
+            }, "Confirm", ButtonStyle.Danger)});
+        }
+        #endregion
     }
 }
