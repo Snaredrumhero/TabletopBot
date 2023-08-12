@@ -13,7 +13,7 @@ namespace TableTopBot
     {
         /// <summary>  Tells the program how to format all saved and loaded json </summary>
         public static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions { WriteIndented = true, IncludeFields = true };
-        
+
         /// <summary> Stores all data that should not be publicly accessable and needs to be loaded from a json file </summary>
         private static class PrivateVariables
         {
@@ -251,6 +251,7 @@ namespace TableTopBot
             while (!end) await Task.Delay(1000);
             await DeleteAllInteractions();
             await Client.LogoutAsync();
+            Console.ReadKey();
         }
 
         /// <summary> Holds what to do when specific commands are given </summary>
@@ -364,7 +365,7 @@ namespace TableTopBot
                     var options = method.GetCustomAttributes<OptionAttribute>();
                     await Respond(_command, changeComponents: false, embed: new EmbedBuilder().WithTitle($"**{name}**").WithDescription((ca.description + (options.Count() > 0 ? "\n\n__Parameters__" : "") + string.Join(null, options.Select(o => $"\n-{o.option.Name} - {o.option.Description}")))).WithColor(ca.modOnly ? Color.Red : Color.Blue).Build());
                 }, options: CommandMethods.Where(m => !m.GetCustomAttribute<CommandAttribute>()!.modOnly || Server.GetUser(_command.User.Id).GuildPermissions.KickMembers).Select(m => new SelectMenuOptionBuilder().WithLabel(FormatName(m.Name)).WithDescription(m.GetCustomAttribute<CommandAttribute>()!.description).WithValue(FormatName(m.Name))).ToList(), placeholder: "Select Command") }, ephemeral: true);
-    
+
         /// <summary> Formats the name of a command </summary>
         /// <param name="str"> the string to format </param>
         private static string FormatName(string str) => string.Join(null, str.Select(c => char.IsLower(c) ? c.ToString() : $"-{char.ToLower(c)}")).Substring(1);
@@ -436,6 +437,9 @@ namespace TableTopBot
         /// <summary> The command that this interaction is in response to </summary>
         private readonly SocketSlashCommand Command;
 
+        /// <summary> The follow ups to the command </summary>
+        private readonly List<RestFollowupMessage> FollowUpMessages = new List<RestFollowupMessage>();
+
         private Interaction(SocketSlashCommand command)
         {
             Command = command;
@@ -443,65 +447,41 @@ namespace TableTopBot
         }
 
         /// <summary> Responds to the command </summary>
-        /// <param name="_command"></param>
-        /// <param name="changeText"></param>
-        /// <param name="text"></param>
-        /// <param name="changeEmbeds"></param>
-        /// <param name="embeds"></param>
-        /// <param name="embed"></param>
-        /// <param name="isTTS"></param>
-        /// <param name="ephemeral"></param>
-        /// <param name="changeAM"></param>
-        /// <param name="allowedMentions"></param>
-        /// <param name="changeComponents"></param>
-        /// <param name="components"></param>
-        /// <param name="buttons"></param>
-        /// <param name="selectMenus"></param>
-        /// <param name="options"></param>
         public static async Task Respond(SocketSlashCommand _command, bool changeText = true, string? text = null,
                                   bool changeEmbeds = true, Embed[]? embeds = null, Embed? embed = null, ///changes both
                                   bool isTTS = false, bool ephemeral = true, ///can't be changed
-                                  bool changeAM = true, AllowedMentions? allowedMentions = null, 
+                                  bool changeAM = true, AllowedMentions? allowedMentions = null,
                                   bool changeComponents = true, ComponentBuilder? components = null, Button[]? buttons = null, SelectMenu[]? selectMenus = null, /// changes all
-                                  RequestOptions? options = null) =>
-            await (!_command.HasResponded ? new Interaction(_command) : Interactions[_command]).Respond(changeText, text, changeEmbeds, embeds, embed, isTTS, ephemeral, changeAM, allowedMentions, changeComponents, components, buttons, selectMenus, options);
+                                  RequestOptions? options = null, bool followup = false) =>
+            await (!_command.HasResponded ? new Interaction(_command) : Interactions[_command]).Respond(changeText, text, changeEmbeds, embeds, embed, isTTS, ephemeral, changeAM, allowedMentions, changeComponents, components, buttons, selectMenus, options, followup);
 
         /// <summary> Responds to the command </summary>
-        /// <param name="_component"></param>
-        /// <param name="changeText"></param>
-        /// <param name="text"></param>
-        /// <param name="changeEmbeds"></param>
-        /// <param name="embeds"></param>
-        /// <param name="embed"></param>
-        /// <param name="isTTS"></param>
-        /// <param name="ephemeral"></param>
-        /// <param name="changeAM"></param>
-        /// <param name="allowedMentions"></param>
-        /// <param name="changeComponents"></param>
-        /// <param name="components"></param>
-        /// <param name="buttons"></param>
-        /// <param name="selectMenus"></param>
-        /// <param name="options"></param>
-        /// <returns></returns>
         public static async Task Respond(SocketMessageComponent _component, bool changeText = true, string? text = null,
                                   bool changeEmbeds = true, Embed[]? embeds = null, Embed? embed = null, ///changes both
                                   bool isTTS = false, bool ephemeral = true, ///can't be changed
                                   bool changeAM = true, AllowedMentions? allowedMentions = null,
                                   bool changeComponents = true, ComponentBuilder? components = null, Button[]? buttons = null, SelectMenu[]? selectMenus = null, /// changes all
-                                  RequestOptions? options = null) => 
-            await Interactions[Components[ulong.Parse(_component.Data.CustomId)]].Respond(changeText, text, changeEmbeds, embeds, embed, isTTS, ephemeral, changeAM, allowedMentions, changeComponents, components, buttons, selectMenus, options);
-        
-        private async Task Respond(bool changeText, string? text, bool changeEmbeds, Embed[]? embeds, Embed? embed, bool isTTS, bool ephemeral, bool changeAM, AllowedMentions? allowedMentions, bool changeComponents, ComponentBuilder? components, Button[]? buttons, SelectMenu[]? selectMenus, RequestOptions? options)
+                                  RequestOptions? options = null, bool followup = false) =>
+            await Interactions[Components[ulong.Parse(_component.Data.CustomId)]].Respond(changeText, text, changeEmbeds, embeds, embed, isTTS, ephemeral, changeAM, allowedMentions, changeComponents, components, buttons, selectMenus, options, followup);
+
+        private async Task Respond(bool changeText, string? text, bool changeEmbeds, Embed[]? embeds, Embed? embed, bool isTTS, bool ephemeral, bool changeAM, AllowedMentions? allowedMentions, bool changeComponents, ComponentBuilder? components, Button[]? buttons, SelectMenu[]? selectMenus, RequestOptions? options, bool followup = false)
         {
             ///Get all components
             ComponentBuilder fullComponent = components ?? new ComponentBuilder();
             buttons?.ToList().ForEach(b => fullComponent = fullComponent.WithButton(b.GetBuilder(this)));
             selectMenus?.ToList().ForEach(sm => fullComponent = fullComponent.WithSelectMenu(sm.GetBuilder(this)));
             ///Respond
-            if (!Command.HasResponded)
+            if (followup)
+            {
+                FollowUpMessages.Add(await Command.FollowupAsync(text, embeds, isTTS, ephemeral, allowedMentions, fullComponent.Build(), embed, options));
+                if (!Interactions.ContainsKey(Command))
+                    Interactions.Add(Command, this);
+            }
+            else if (!Command.HasResponded)
             {
                 await Command.RespondAsync(text, embeds, isTTS, ephemeral, allowedMentions, fullComponent.Build(), embed, options);
-                Interactions.Add(Command, this);
+                if (!Interactions.ContainsKey(Command))
+                    Interactions.Add(Command, this);
             }
             else
                 await Command.ModifyOriginalResponseAsync(m => {
@@ -589,7 +569,7 @@ namespace TableTopBot
 
         /// <summary> The list of all components that are part of the interaction and what to do with them </summary>
         private Dictionary<ulong, Func<SocketSlashCommand, SocketMessageComponent, Task>> ComponentCallbacks = new Dictionary<ulong, Func<SocketSlashCommand, SocketMessageComponent, Task>>();
-        
+
         /// <summary> Invokes the callback of a specific component </summary>
         /// <param name="component">The component</param>
         public static async Task ComponentCallback(SocketMessageComponent component)
@@ -604,7 +584,7 @@ namespace TableTopBot
         }
         #endregion
 
-        #region Interaction Cleanup
+        #region Cleanup
         /// <summary> Stores the time that the component was last used </summary>
         private DateTime LastUsed;
 
@@ -612,14 +592,20 @@ namespace TableTopBot
         private async Task DeleteInteraction()
         {
             Interactions.Remove(Command);
-            await Command.DeleteOriginalResponseAsync();
+            foreach (var item in FollowUpMessages)
+                await item.DeleteAsync();
+            if (Command.HasResponded)
+                await Command.DeleteOriginalResponseAsync();
             Components.Where(c => c.Value == Command).ToList().ForEach(c => Components.Remove(c.Key));
         }
+
+        /// <summary> Delets an interaction </summary>
+        public static async Task DeleteInteraction(SocketSlashCommand _command) => await Interactions[_command].DeleteInteraction();
 
         /// <summary> Deletes all interactions </summary>
         public static async Task DeleteAllInteractions()
         {
-            foreach (Interaction i in Interactions.Values) 
+            foreach (Interaction i in Interactions.Values)
                 await i.DeleteInteraction();
         }
 
@@ -647,7 +633,7 @@ namespace TableTopBot
         {
             ///Make buttons
             Button prev = new Button(async (SocketSlashCommand _command, SocketMessageComponent _component) => await RecursiveMuliPageEmbed(_command, embeds, title, index - 1 < 0 ? embeds.Length - 1 : --index, color), "Previous", ButtonStyle.Primary, isDisabled: embeds.Count() == 1);
-            Button next = new Button(async (SocketSlashCommand _command, SocketMessageComponent _component) => await RecursiveMuliPageEmbed(_command, embeds, title, index + 1 >= embeds.Length ? 0 : ++index, color)   , "Next"    , ButtonStyle.Primary, isDisabled: embeds.Count() == 1);
+            Button next = new Button(async (SocketSlashCommand _command, SocketMessageComponent _component) => await RecursiveMuliPageEmbed(_command, embeds, title, index + 1 >= embeds.Length ? 0 : ++index, color), "Next", ButtonStyle.Primary, isDisabled: embeds.Count() == 1);
 
             ///Display
             await Interaction.Respond(_command, embed: embeds[index].WithTitle(title).WithFooter($"Page {index + 1}/{embeds.Length}").WithColor(color == null ? Color.Blue : (Color)color).Build(), buttons: new Button[] { prev, next });

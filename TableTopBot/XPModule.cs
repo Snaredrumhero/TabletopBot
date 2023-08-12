@@ -384,7 +384,7 @@
                 ///Creates the event
                 xpSystem = new XpStorage(eventName);
 
-                //readd the @ before everyone
+                //*note* readd the @ before everyone
                 ///Checks if the event was loaded and gives appropriate response
                 await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: canLoad ? $"everyone Thank you for your patience, the event is back up and running!" : $"@everyone Welcome to {xpSystem.EventName}!\nLook to this channel for future updates and visit the {PrivateVariables.SocketCommandChannel.Mention} channel to register youself to this event! (/join-event)\n**Disclaimer**: you need to be a current student at Ohio University and be at the event to recieve any prizes");
 
