@@ -610,7 +610,11 @@ namespace TableTopBot
         }
 
         /// <summary> Checks if any inteactions are over 5 minutes old and deletes them </summary>
-        [Update] public static void UpdateInteractions() => Interactions.Values.Where(i => DateTime.UtcNow.Subtract(i.LastUsed).Minutes > 5).ToList().ForEach(async i => await i.DeleteInteraction());
+        [Update] public static async void UpdateInteractions()
+        {
+            foreach (var item in Interactions.Values.Where(i => DateTime.UtcNow.Subtract(i.LastUsed).Minutes > 5))
+                await item.DeleteInteraction();
+        }
         #endregion
 
         #region Multi Page Embeds

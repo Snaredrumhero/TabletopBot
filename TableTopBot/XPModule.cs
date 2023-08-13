@@ -1,4 +1,6 @@
-﻿namespace TableTopBot
+﻿using System;
+
+namespace TableTopBot
 {
     internal class XPModule
     {
@@ -23,7 +25,7 @@
             public string DisplayAll() => $"***Average Time Spent:*** {Math.Round((double)Users.Sum(u => u.CurrentTime) / Users.Count, 2)} Minutes\n***Average Number of Games Played:*** {Math.Round((double)Users.Sum(u => u.GamesPlayed.Count) / Users.Count, 2)}\n***Average Amount of XP Earned:*** {Math.Round((double)Users.Sum(u => u.TotalPoints) / Users.Count, 2)}\n***Total Attendees:*** {Users.Count}";
 
             #region Users
-            private class User
+            private class User : IComparable<User>
             {
                 ///Variables
                 private readonly List<string> _achievementsClaimed; ///The list of all possible achievements a user can get
@@ -105,10 +107,9 @@
 
                     return embedlist.ToArray();
                 }
+                public int CompareTo(User? other) => other == null ? 0 : (int)(other.TotalPoints - TotalPoints);
 
                 ///Operators
-                public static bool operator >(User a, User b) => a.TotalPoints > b.TotalPoints;
-                public static bool operator <(User a, User b) => a.TotalPoints < b.TotalPoints;
                 public static implicit operator UserData(User u) => new UserData(u.DiscordUser.Id, u.Pid, u.GamesPlayed.Select(g => (GameData)g).ToArray(), u.IsRaffleWinner, u._achievementsClaimed.ToArray(), u.NumberGamesPlayed, u.BoughtTickets);
                 public static implicit operator User(UserData u) => new User(u.DiscordId, u.PID, u.GamesPlayed.Select(g => (Game)g).ToList(), u.WonRaffle, u.NumberGamesPlayed, u.AchievementsClaimed.ToList());
             }
@@ -157,7 +158,7 @@
             {
                 Users.Sort();
                 int i = 0;
-                return string.Join('\n', Users.Take(x > Users.Count ? Users.Count : x).ToList().Select(u => $"{++i}: {(mention ? u.DiscordUser.Mention : Server.GetUser(u.DiscordUser.Id).DisplayName)} - {u.CurrentPoints}"));
+                return string.Join('\n', Users.Take(x > Users.Count ? Users.Count : x).Select(u => $"{++i}: {(mention ? u.DiscordUser.Mention : Server.GetUser(u.DiscordUser.Id).DisplayName)} - {u.CurrentPoints}"));
             }
             public void UserBuyTickets(ulong discordId, uint x = 1)
             {
@@ -386,7 +387,7 @@
 
                 //*note* readd the @ before everyone
                 ///Checks if the event was loaded and gives appropriate response
-                await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: canLoad ? $"everyone Thank you for your patience, the event is back up and running!" : $"@everyone Welcome to {xpSystem.EventName}!\nLook to this channel for future updates and visit the {PrivateVariables.SocketCommandChannel.Mention} channel to register youself to this event! (/join-event)\n**Disclaimer**: you need to be a current student at Ohio University and be at the event to recieve any prizes");
+                await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: canLoad ? $"everyone Thank you for your patience, the event is back up and running!" : $"everyone Welcome to {xpSystem.EventName}!\nLook to this channel for future updates and visit the {PrivateVariables.SocketCommandChannel.Mention} channel to register youself to this event! (/join-event)\n**Disclaimer**: you need to be a current student at Ohio University and be at the event to recieve any prizes");
 
                 ///User Feedback
                 await Respond(_command, text: "Successfully started the event.");
