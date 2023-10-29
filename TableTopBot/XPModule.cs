@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace TableTopBot
+﻿namespace TableTopBot
 {
     internal class XPModule
     {
@@ -28,7 +26,7 @@ namespace TableTopBot
             private class User : IComparable<User>
             {
                 ///Variables
-                private readonly List<string> _achievementsClaimed; ///The list of all possible achievements a user can get
+                public readonly List<string> _achievementsClaimed; ///The list of all possible achievements a user can get
                 private readonly List<Game> _gamesPlayed;           ///The games the user has played in
 
                 public SocketUser DiscordUser;                      ///The user's discord
@@ -138,7 +136,9 @@ namespace TableTopBot
             public void AddNewUser(SocketUser addedUser, string pid)
             {
                 ///Validate PID
-                if (pid[0] != 'P' || pid.Length != 10 || !int.TryParse(pid[1..9], out int value))
+                //if (pid.Length == 9 || int.TryParse(pid[0..8], out int value))
+                    //pid = 'P' + pid;
+                /*else*/ if (pid[0] != 'P' || pid.Length != 10 || !int.TryParse(pid[1..9], out int value2))
                     throw new InvalidDataException(message: "Invalid PID.");
                 for (int i = 1; i < 10; i++)
                     if (pid[i] < '0' || pid[i] > '9')
@@ -178,9 +178,9 @@ namespace TableTopBot
             private class Game
             {
                 ///Static
-                private static readonly double PointsScale = 1.5;             ///The scale of points per minute
-                private static readonly double XtraScale = PointsScale / 0.5; ///The scale of extra points awarded
-                private static readonly int RankedPositions = 5;              ///The amount of ranked positions
+                private static readonly double POINTS_SCALE = 1.5;  ///The scale of points per minute
+                private static readonly double XTRA_SCALE = 0.5;    ///The scale of extra points awarded
+                private static readonly int RANKED_POSITIONS = 5;   ///The amount of ranked positions
 
                 ///Variables
                 public readonly GameData Data; ///Stores the data for a game
@@ -198,29 +198,16 @@ namespace TableTopBot
                 {
                     Data = data;
 
-                    ///XP Computation
-                    ///For ranked 5 and up
-                    ///1st gets 24/24
-                    ///2nd gets 22/24
-                    ///3rd gets 20/24
-                    ///4th gets 18/24
-                    ///5th gets 16/24
-
-                    double points = PointsScale * Data.GameLength;
-                    double xtraPoints = XtraScale * Data.GameLength;
+                    double points = POINTS_SCALE * Data.GameLength;
+                    double xtraPoints = points * XTRA_SCALE;
                     if (Data.Type == GameType.Ranked)
                     {
-                        if (Data.PlayerCount >= RankedPositions)
-                        {
-                            if (Data.Rank <= RankedPositions)
-                                XpValue = (int)(points + (xtraPoints) / Data.Rank);
-                            else
-                                XpValue = (int)points;
-                        }
+                        if (Data.PlayerCount >= RANKED_POSITIONS)
+                           XpValue = (int)(Data.Rank <= RANKED_POSITIONS ? points + xtraPoints / Data.Rank : points);
                         else
                         {
-                            xtraPoints = (double)((XtraScale * Data.PlayerCount) / (double)RankedPositions) * Data.GameLength;
-                            XpValue = (int)(points + xtraPoints / (((Data.Rank - 1) * RankedPositions / (Data.PlayerCount)) + 1));
+                            xtraPoints = (double)((XTRA_SCALE * Data.PlayerCount) / (double)RANKED_POSITIONS) * Data.GameLength;
+                            XpValue = (int)(points + xtraPoints / (((Data.Rank - 1) * RANKED_POSITIONS / (Data.PlayerCount)) + 1));
                         }
                     }
                     else
@@ -271,7 +258,7 @@ namespace TableTopBot
             #endregion
 
             #region Achievements
-            private class Achievement
+            public class Achievement
             {
                 public readonly AchievementData Data; ///Stores the data for an achievement
                 private Achievement(AchievementData data) { Data = data; } ///Achievement Constructor
@@ -279,7 +266,7 @@ namespace TableTopBot
 
                 public static implicit operator Achievement(AchievementData a) => new Achievement(a); ///Converts data into an achievement
             }
-            private struct AchievementData
+            public struct AchievementData
             {
                 public string Name { get; set; }        ///The name of the achievement
                 public string Description { get; set; } ///The requirements to get it
@@ -292,7 +279,7 @@ namespace TableTopBot
                     XpValue = xpValue;
                 }
             }
-            private static readonly List<Achievement> DefaultAchievements = (JsonSerializer.Deserialize<AchievementData[]>(File.ReadAllText("./Achievements.json")) ?? throw new NullReferenceException("No Data In Achievement File")).Select(a => (Achievement)a).ToList();
+            public static readonly List<Achievement> DefaultAchievements = (JsonSerializer.Deserialize<AchievementData[]>(File.ReadAllText("./Achievements.json")) ?? throw new NullReferenceException("No Data In Achievement File")).Select(a => (Achievement)a).ToList();
             public EmbedBuilder ClaimUserAchievement(ulong discordId, string achievementName)
             {
                 string achievementClaimed = (Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system.")).ClaimAchievement(achievementName);
@@ -305,6 +292,7 @@ namespace TableTopBot
                 Save();
                 return new EmbedBuilder().WithDescription(achievementUnclaimed.ToString());
             }
+            public bool HasAchievement(ulong discordId, string achievementName) => (Users.FirstOrDefault(user => user.DiscordUser.Id == discordId) ?? throw new NullReferenceException(message: "User not found in system."))._achievementsClaimed.Contains(achievementName);
             #endregion
 
             #region Raffles
@@ -373,8 +361,7 @@ namespace TableTopBot
             await Respond(_command, buttons: new Button[] { new Button(async (SocketSlashCommand _command, SocketMessageComponent _component) =>
             {
                 ///Adds permissions for everyone to input commands
-                //*note* uncomment next line when publishing
-                //await PrivateVariables.SocketCommandChannel.AddPermissionOverwriteAsync(Server.EveryoneRole, OverwritePermissions.DenyAll(PrivateVariables.SocketCommandChannel).Modify(viewChannel: PermValue.Allow, useApplicationCommands: PermValue.Allow, sendMessages: PermValue.Allow));
+                await PrivateVariables.SocketCommandChannel.AddPermissionOverwriteAsync(Server.EveryoneRole, OverwritePermissions.DenyAll(PrivateVariables.SocketCommandChannel).Modify(viewChannel: PermValue.Allow, useApplicationCommands: PermValue.Allow, sendMessages: PermValue.Allow));
 
                 ///Parses the event name
                 string eventName = (string)_command.Data.Options.First().Value;
@@ -385,9 +372,8 @@ namespace TableTopBot
                 ///Creates the event
                 xpSystem = new XpStorage(eventName);
 
-                //*note* readd the @ before everyone
                 ///Checks if the event was loaded and gives appropriate response
-                await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: canLoad ? $"everyone Thank you for your patience, the event is back up and running!" : $"everyone Welcome to {xpSystem.EventName}!\nLook to this channel for future updates and visit the {PrivateVariables.SocketCommandChannel.Mention} channel to register youself to this event! (/join-event)\n**Disclaimer**: you need to be a current student at Ohio University and be at the event to recieve any prizes");
+                await PrivateVariables.SocketAnnouncementChannel.SendMessageAsync(text: canLoad ? $"@everyone Thank you for your patience, the event is back up and running!" : $"@everyone Welcome to {xpSystem.EventName}!\nLook to this channel for future updates and visit the {PrivateVariables.SocketCommandChannel.Mention} channel to register youself to this event! (/join-event)\n**Disclaimer**: you need to be a current student at Ohio University and be at the event to recieve any prizes");
 
                 ///User Feedback
                 await Respond(_command, text: "Successfully started the event.");
@@ -508,20 +494,29 @@ namespace TableTopBot
 
         [Command(description: "Removes an achievement from a user's profile.", modOnly: true)]
         [Option(name: "user", type: ApplicationCommandOptionType.User, description: "The user to remove the achievement from.", isRequired: true)]
-        [Option(name: "name", type: ApplicationCommandOptionType.String, description: "The name of the achievement to remove from the profile.", isRequired: true)]
         public static async Task RemoveUserAchievement(SocketSlashCommand _command)
         {
             ///Checks if the event has started
             if (xpSystem == null)
                 throw new Exception("Error: No event currently running.");
 
-            await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
-                ///Remove the achievement
-                EmbedBuilder displayAchievement = xpSystem.UnclaimUserAchievement(((SocketUser)_command.Data.Options.First().Value).Id, (string)_command.Data.Options.ElementAt(1).Value);
+            ulong user = ((SocketUser)_command.Data.Options.First().Value).Id;
 
-                ///User Feedback
-                await Respond(_command, embed: displayAchievement.WithTitle($"Successfully removed {((SocketUser)_command.Data.Options.First().Value).Username}'s achievement").WithColor(Color.Red).Build());
-            }, "Confirm", ButtonStyle.Danger)});
+            ///Error Catch
+            if (XpStorage.DefaultAchievements.Where(a => xpSystem.HasAchievement(user, a.Data.Name)).Count() == 0)
+                await Respond(_command, text: "No achievements to remove");
+            else
+                await Respond(_command, embed: new EmbedBuilder().WithTitle("Achievements").WithDescription("Select an achievement to remove:").WithColor(Color.Orange).Build(), selectMenus: new SelectMenu[]{ new SelectMenu(async (SocketSlashCommand _command, SocketMessageComponent _component) =>
+                    {
+                        ///Confirmation
+                        await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component2) => {
+                            ///Remove achievement
+                            EmbedBuilder displayAchievement = xpSystem.UnclaimUserAchievement(user, string.Join(", ", _component.Data.Values));
+                        
+                            ///User Feedback
+                            await Respond(_command, embed: displayAchievement.WithTitle($"Successfully removed {((SocketUser)_command.Data.Options.First().Value).Username}'s achievement").WithColor(Color.Red).Build());
+                        }, "Confirm", ButtonStyle.Danger) });
+                    }, options: XpStorage.DefaultAchievements.Where(a => xpSystem.HasAchievement(user, a.Data.Name)).Select(a => new SelectMenuOptionBuilder().WithLabel(a.Data.Name).WithDescription($"{a.Data.XpValue}- {a.Data.Description}").WithValue(a.Data.Name)).ToList(), placeholder: "Select Achievement") }, ephemeral: true);
         }
 
         [Command(description: "Removes a user's profile from the event, *Warning* this removes all of their data.", modOnly: true)]
@@ -638,36 +633,47 @@ namespace TableTopBot
         }
 
         [Command(description: "Adds an achievement to your profile from the list of available achievements.")]
-        [Option(name: "name", type: ApplicationCommandOptionType.String, description: "The name of the achievement to add (can be found by using see-achievements).", isRequired: true)]
         public static async Task AddAchievement(SocketSlashCommand _command)
         {
-
             ///Checks if the event has started
             if (xpSystem == null)
                 throw new Exception("Error: No event currently running.");
 
-            ///Adds the achievement
-            EmbedBuilder displayAchievement = xpSystem.ClaimUserAchievement(_command.User.Id, (string)_command.Data.Options.First().Value);
+            ///Error Catch
+            if (XpStorage.DefaultAchievements.Where(a => !xpSystem.HasAchievement(_command.User.Id, a.Data.Name)).Count() == 0)
+                await Respond(_command, text: "No achievements to add");
+            else
+                await Respond(_command, embed: new EmbedBuilder().WithTitle("Achievements").WithDescription("Select an achievement to add:").WithColor(Color.Orange).Build(), selectMenus: new SelectMenu[]{ new SelectMenu(async (SocketSlashCommand _command, SocketMessageComponent _component) =>
+                {
+                    ///Adds the achievement
+                    EmbedBuilder displayAchievement = xpSystem.ClaimUserAchievement(_command.User.Id, _component.Data.Values.First());
 
-            ///User Feedback
-            await Respond(_command, embed: displayAchievement.WithTitle("Successfully claimed achievement").WithColor(Color.Blue).Build());
+                    ///User Feedback
+                    await Respond(_command, embed: displayAchievement.WithTitle("Successfully claimed achievement").WithColor(Color.Blue).Build());
+                }, options: XpStorage.DefaultAchievements.Where(a => !xpSystem.HasAchievement(_command.User.Id, a.Data.Name)).Select(a => new SelectMenuOptionBuilder().WithLabel(a.Data.Name).WithDescription($"{a.Data.XpValue}- {a.Data.Description}").WithValue(a.Data.Name)).ToList(), placeholder: "Select Achievement") }, ephemeral: true);
         }
 
         [Command(description: "Unclaims an achievment from your profile.")]
-        [Option(name: "name", type: ApplicationCommandOptionType.String, description: "The name of the achievement to remove from your profile.", isRequired: true)]
         public static async Task RemoveAchievement(SocketSlashCommand _command)
         {
             ///Checks if the event has started
             if (xpSystem == null)
                 throw new Exception("Error: No event currently running.");
 
-            await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component) => {
-                ///Remove achievement
-                EmbedBuilder achievementUnclaimed = xpSystem.UnclaimUserAchievement(_command.User.Id, (string)_command.Data.Options.First().Value);
-
-                ///User Feedback
-                await Respond(_command, embed: achievementUnclaimed.WithTitle("Successfully removed achievement.").WithColor(Color.Blue).Build());
-            }, "Confirm", ButtonStyle.Danger) });
+            ///Error Catch
+            if(XpStorage.DefaultAchievements.Where(a => xpSystem.HasAchievement(_command.User.Id, a.Data.Name)).Count() == 0)
+                await Respond(_command, text: "No achievements to remove");
+            else
+                await Respond(_command, embed: new EmbedBuilder().WithTitle("Achievements").WithDescription("Select an achievement to remove:").WithColor(Color.Orange).Build(), selectMenus: new SelectMenu[]{ new SelectMenu(async (SocketSlashCommand _command, SocketMessageComponent _component) =>
+                {
+                    await Respond(_command, buttons: new Button[]{ new Button(async Task (SocketSlashCommand _command, SocketMessageComponent _component2) => {                            
+                        ///Remove achievement
+                        EmbedBuilder achievementUnclaimed = xpSystem.UnclaimUserAchievement(_command.User.Id, string.Join(", ", _component.Data.Values));
+                            
+                        ///User Feedback
+                        await Respond(_command, embed: achievementUnclaimed.WithTitle("Successfully removed achievement.").WithColor(Color.Blue).Build());
+                    }, "Confirm", ButtonStyle.Danger) });
+                }, options: XpStorage.DefaultAchievements.Where(a => xpSystem.HasAchievement(_command.User.Id, a.Data.Name)).Select(a => new SelectMenuOptionBuilder().WithLabel(a.Data.Name).WithDescription($"{a.Data.XpValue}- {a.Data.Description}").WithValue(a.Data.Name)).ToList(), placeholder: "Select Achievement") }, ephemeral: true);
         }
 
         [Command(description: "Either displays all of your achievements or all possible achievements.")]
@@ -703,5 +709,46 @@ namespace TableTopBot
             }, "Confirm", ButtonStyle.Danger)});
         }
         #endregion
+        /*[Command(description: "Gets the XP for a game")]
+        [Option(name: "player-count", type: ApplicationCommandOptionType.Integer, description: "The number of players or teams in the game.", isRequired: true)]
+        [Option(name: "type", type: ApplicationCommandOptionType.String, description: "One of: ranked/coop/teams/party based on the type of game played.", isRequired: true, channelTypes: new ChannelType[0], choiceKeys: new string[] { "Ranked", "Co-op", "Teams", "Party" }, choiceValues: new string[] { "ranked", "coop", "teams", "party" })]
+        [Option(name: "placing", type: ApplicationCommandOptionType.Integer, description: "Where you ranked, teams share the same rank, for unranked games a win is 1 and a loss is 2.", isRequired: true)]
+        [Option(name: "length", type: ApplicationCommandOptionType.Integer, description: "The length of the game in minutes.", isRequired: true)]
+        public static async Task GetGameXP(SocketSlashCommand _command)
+        {
+            ///Checks if the event has started
+            //if (xpSystem == null)
+                //throw new Exception("Error: No event currently running.");
+
+            ///Get game data
+            uint playerCount = Convert.ToUInt32(_command.Data.Options.ElementAt(0).Value);
+            GameType type = (_command.Data.Options.ElementAt(1).Value as string) switch { "ranked" => GameType.Ranked, "coop" => GameType.CoOp, "teams" => GameType.Teams, "party" => GameType.Party, _ => throw new InvalidDataException(message: "Invalid Game Type.") };
+            uint rank = Convert.ToUInt32(_command.Data.Options.ElementAt(2).Value);
+            uint time = Convert.ToUInt32(_command.Data.Options.ElementAt(3).Value);
+
+            int XpValue = 0;
+            double points = 1.5f * time;
+            double xtraPoints = points * .5f;
+            if (type == GameType.Ranked)
+            {
+                if (playerCount >= 5)
+                {
+                    if (rank <= 5)
+                        XpValue = (int)(points + (xtraPoints) / rank);
+                    else
+                        XpValue = (int)points;
+                }
+                else
+                {
+                    xtraPoints = (double)((.5 * playerCount) / (double)5) * time;
+                    XpValue = (int)(points + xtraPoints / (((rank - 1) * 5 / (playerCount)) + 1));
+                }
+            }
+            else
+                XpValue = (int)(points + (rank == 1 ? (xtraPoints / 2) : 0));
+
+            ///User Feedback
+            await Respond(_command, text: $"{XpValue}pts");
+        }*/
     }
 }
